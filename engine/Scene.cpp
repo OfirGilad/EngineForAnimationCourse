@@ -143,11 +143,6 @@ void Scene::KeyCallback(Viewport* viewport, int x, int y, int key, int scancode,
             case GLFW_KEY_F:
                 camera->TranslateInSystem(system, {0, 0, -0.05f});
                 break;
-            // New Code - Start
-            case GLFW_KEY_SPACE:
-                igl::opengl::glfw::Viewer viewer;
-                viewer.core().is_animating = true;
-            // New Code - End
         }
     }
 }

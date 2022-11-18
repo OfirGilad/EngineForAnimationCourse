@@ -18,6 +18,8 @@
 #include <iostream>
 #include <set>
 
+#include <vector>
+
 
 // #include "AutoMorphingModel.h"
 
@@ -69,18 +71,25 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     Eigen::MatrixXd V, C;
     int num_collapsed;
 
+    Eigen::MatrixXi OF;
+    Eigen::MatrixXd OV;
+
     // Function to reset original mesh and data structures
     V = mesh[0]->data[0].vertices;
     F = mesh[0]->data[0].faces;
+
+    OF = F;
+    OV = V;
+
     // igl::read_triangle_mesh("data/cube.off",V,F);
     igl::edge_flaps(F,E,EMAP,EF,EI);
-    std::cout<< "vertices: \n" << V <<std::endl;
-    std::cout<< "faces: \n" << F <<std::endl;
-    
-    std::cout<< "edges: \n" << E.transpose() <<std::endl;
-    std::cout<< "edges to faces: \n" << EF.transpose() <<std::endl;
-    std::cout<< "faces to edges: \n "<< EMAP.transpose()<<std::endl;
-    std::cout<< "edges indices: \n" << EI.transpose() <<std::endl;
+    //std::cout<< "vertices: \n" << V <<std::endl;
+    //std::cout<< "faces: \n" << F <<std::endl;
+    //
+    //std::cout<< "edges: \n" << E.transpose() <<std::endl;
+    //std::cout<< "edges to faces: \n" << EF.transpose() <<std::endl;
+    //std::cout<< "faces to edges: \n "<< EMAP.transpose()<<std::endl;
+    //std::cout<< "edges indices: \n" << EI.transpose() <<std::endl;
 
     // New Code - Start
 
@@ -91,8 +100,15 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     igl::opengl::glfw::Viewer viewer;
     igl::min_heap< std::tuple<double, int, int> > Q;
 
+    //int index = 0;
+    //vector<tuple<Eigen::MatrixXd, Eigen::MatrixXi>> mesh_list;
+    
+
     const auto& reset = [&]()
     {
+        F = OF;
+        V = OV;
+
         edge_flaps(F, E, EMAP, EF, EI);
         C.resize(E.rows(), V.cols());
         VectorXd costs(E.rows());
@@ -120,10 +136,19 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
         viewer.data().clear();
         viewer.data().set_mesh(V, F);
         viewer.data().set_face_based(true);
+        counter = 0;
     };
 
     const auto& pre_draw = [&](igl::opengl::glfw::Viewer& viewer)->bool
     {
+        //tuple<Eigen::MatrixXd, Eigen::MatrixXi> prev_values = { V, F };
+        //mesh_list.push_back(prev_values);
+
+        if (counter == 10) {
+            reset();
+            return false;
+        }
+
         // If animating then collapse 10% of edges
         if (viewer.core().is_animating && !Q.empty())
         {
@@ -146,10 +171,22 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
                 viewer.data().set_mesh(V, F);
                 viewer.data().set_face_based(true);
                 viewer.core().is_animating = false;
+                counter += 1;
             }
         }
         return false;
     };
+
+    /*const auto& back_draw = [&]()
+    {
+        index -= 1;
+        viewer.data().clear();
+        viewer.data().set_mesh(get<0>(mesh_list[index]), get<1>(mesh_list[index]));
+        viewer.data().set_face_based(true);
+        viewer.core().is_animating = false;
+
+        return false;
+    };*/
 
     const auto& key_down =
         [&](igl::opengl::glfw::Viewer& viewer, unsigned char key, int mod)->bool
@@ -188,4 +225,20 @@ void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, con
     sphere1->Rotate(0.005f, Axis::Y);
     cube->Rotate(0.005f, Axis::Y);
     camel->Rotate(0.005f, Axis::Y);
+}
+
+void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, int scancode, int action, int mods)
+{
+    if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+        igl::opengl::glfw::Viewer viewer;
+
+        switch (key) // NOLINT(hicpp-multiway-paths-covered)
+        {
+        // New Code - Start
+        case GLFW_KEY_SPACE:
+            viewer.core().is_animating = true;
+            break;
+        // New Code - End
+        }
+    }
 }
