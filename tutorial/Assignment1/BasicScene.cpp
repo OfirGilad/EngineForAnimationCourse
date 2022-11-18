@@ -108,7 +108,6 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     {
         F = OF;
         V = OV;
-
         edge_flaps(F, E, EMAP, EF, EI);
         C.resize(E.rows(), V.cols());
         VectorXd costs(E.rows());
@@ -119,13 +118,13 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
         {
             Eigen::VectorXd costs(E.rows());
             igl::parallel_for(E.rows(), [&](const int e)
-                {
-                    double cost = e;
-            RowVectorXd p(1, 3);
-            shortest_edge_and_midpoint(e, V, F, E, EMAP, EF, EI, cost, p);
-            C.row(e) = p;
-            costs(e) = cost;
-                }, 10000);
+            {
+                double cost = e;
+                RowVectorXd p(1, 3);
+                shortest_edge_and_midpoint(e, V, F, E, EMAP, EF, EI, cost, p);
+                C.row(e) = p;
+                costs(e) = cost;
+            }, 10000);
             for (int e = 0;e < E.rows();e++)
             {
                 Q.emplace(costs(e), e, 0);
@@ -188,8 +187,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
         return false;
     };*/
 
-    const auto& key_down =
-        [&](igl::opengl::glfw::Viewer& viewer, unsigned char key, int mod)->bool
+    const auto& key_down = [&](igl::opengl::glfw::Viewer& viewer, unsigned char key, int mod)->bool
     {
         switch (key)
         {
