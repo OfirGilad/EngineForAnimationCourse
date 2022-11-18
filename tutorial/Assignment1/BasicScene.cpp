@@ -100,8 +100,10 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     igl::opengl::glfw::Viewer viewer;
     igl::min_heap< std::tuple<double, int, int> > Q;
 
-    //int index = 0;
-    //vector<tuple<Eigen::MatrixXd, Eigen::MatrixXi>> mesh_list;
+    int MAX_COLLAPSES = 10;
+    int index = 0;
+    int current_available = 0;
+    vector<tuple<Eigen::MatrixXd, Eigen::MatrixXi>> mesh_list;
     
 
     const auto& reset = [&]()
@@ -135,15 +137,12 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
         viewer.data().clear();
         viewer.data().set_mesh(V, F);
         viewer.data().set_face_based(true);
-        counter = 0;
+        index = 0;
     };
 
     const auto& pre_draw = [&](igl::opengl::glfw::Viewer& viewer)->bool
     {
-        //tuple<Eigen::MatrixXd, Eigen::MatrixXi> prev_values = { V, F };
-        //mesh_list.push_back(prev_values);
-
-        if (counter == 10) {
+        if (index == MAX_COLLAPSES) {
             reset();
             return false;
         }
@@ -170,22 +169,97 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
                 viewer.data().set_mesh(V, F);
                 viewer.data().set_face_based(true);
                 viewer.core().is_animating = false;
-                counter += 1;
+                current_available = min(current_available + 1, MAX_COLLAPSES);
+                index += 1;
+                mesh_list.push_back({ V, F });
             }
         }
         return false;
     };
 
-    /*const auto& back_draw = [&]()
+    const auto& level_up = [&]()
     {
         index -= 1;
-        viewer.data().clear();
-        viewer.data().set_mesh(get<0>(mesh_list[index]), get<1>(mesh_list[index]));
-        viewer.data().set_face_based(true);
-        viewer.core().is_animating = false;
 
-        return false;
-    };*/
+        if (index < 0) 
+        {
+            index = 0;
+            if (current_available != 0)
+            {
+                index = current_available - 1;
+            }
+        }
+
+        V = get<0>(mesh_list[index]);
+        F = get<1>(mesh_list[index]);
+        edge_flaps(F, E, EMAP, EF, EI);
+        C.resize(E.rows(), V.cols());
+        VectorXd costs(E.rows());
+        // https://stackoverflow.com/questions/2852140/priority-queue-clear-method
+        // Q.clear();
+        Q = {};
+        EQ = Eigen::VectorXi::Zero(E.rows());
+        {
+            Eigen::VectorXd costs(E.rows());
+            igl::parallel_for(E.rows(), [&](const int e)
+                {
+                    double cost = e;
+            RowVectorXd p(1, 3);
+            shortest_edge_and_midpoint(e, V, F, E, EMAP, EF, EI, cost, p);
+            C.row(e) = p;
+            costs(e) = cost;
+                }, 10000);
+            for (int e = 0;e < E.rows();e++)
+            {
+                Q.emplace(costs(e), e, 0);
+            }
+        }
+
+        num_collapsed = 0;
+        viewer.data().clear();
+        viewer.data().set_mesh(V, F);
+        viewer.data().set_face_based(true);
+    };
+
+    const auto& level_down = [&]()
+    {
+        index += 1;
+
+        if (index > current_available)
+        {
+            index = 0;
+        }
+
+        V = get<0>(mesh_list[index]);
+        F = get<1>(mesh_list[index]);
+        edge_flaps(F, E, EMAP, EF, EI);
+        C.resize(E.rows(), V.cols());
+        VectorXd costs(E.rows());
+        // https://stackoverflow.com/questions/2852140/priority-queue-clear-method
+        // Q.clear();
+        Q = {};
+        EQ = Eigen::VectorXi::Zero(E.rows());
+        {
+            Eigen::VectorXd costs(E.rows());
+            igl::parallel_for(E.rows(), [&](const int e)
+            {
+                double cost = e;
+                RowVectorXd p(1, 3);
+                shortest_edge_and_midpoint(e, V, F, E, EMAP, EF, EI, cost, p);
+                C.row(e) = p;
+                costs(e) = cost;
+            }, 10000);
+            for (int e = 0;e < E.rows();e++)
+            {
+                Q.emplace(costs(e), e, 0);
+            }
+        }
+
+        num_collapsed = 0;
+        viewer.data().clear();
+        viewer.data().set_mesh(V, F);
+        viewer.data().set_face_based(true);
+    };
 
     const auto& key_down = [&](igl::opengl::glfw::Viewer& viewer, unsigned char key, int mod)->bool
     {
@@ -198,12 +272,23 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
         case 'r':
             reset();
             break;
+        // Go UP
+        case 'W':
+        case 'w':
+            level_up();
+            break;
+        // Go DOWN
+        case 'S':
+        case 's':
+            level_down();
+            break;
         default:
             return false;
         }
         return true;
     };
 
+    mesh_list.push_back({ V, F });
     reset();
     viewer.core().background_color.setConstant(1);
     viewer.core().is_animating = false;
