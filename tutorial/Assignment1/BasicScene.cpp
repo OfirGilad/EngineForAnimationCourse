@@ -84,14 +84,10 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
 
     // New Code - Start
 
+    //int MAX_COLLAPSES = 10;
+
     OF = F;
     OV = V;
-
-    igl::opengl::glfw::Viewer viewer;
-    igl::min_heap< std::tuple<double, int, int> > Q;
-    vector<tuple<Eigen::MatrixXd, Eigen::MatrixXi>> mesh_list;
-
-    //int MAX_COLLAPSES = 10;
     int index = 0;
     int current_available_collapses = 1;
     bool manual_reset_selected = false;
@@ -106,7 +102,6 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
             mesh_list.push_back({OV, OF});
             current_available_collapses = 1;
         }
-
         F = OF;
         V = OV;
         edge_flaps(F, E, EMAP, EF, EI);
@@ -131,27 +126,21 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
                 Q.emplace(costs(e), e, 0);
             }
         }
-
         num_collapsed = 0;
         viewer.data().clear();
         viewer.data().set_mesh(V, F);
         viewer.data().set_face_based(true);
-
         index = 0;
-
     };
 
     const auto& level_up = [&]()
     {
         index--;
-
         if (index < 0) {
             index = max(0, current_available_collapses - 1);
         }
-
         V = get<0>(mesh_list[index]);
         F = get<1>(mesh_list[index]);
-
         viewer.data().clear();
         viewer.data().set_mesh(V, F);
         viewer.data().set_face_based(true);
@@ -160,13 +149,11 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     const auto& level_down = [&]()
     {
         index++;
-
-        if (index >= current_available_collapses)
+        if (index >= current_available_collapses) {
             index = 0;
-
+        }
         V = get<0>(mesh_list[index]);
         F = get<1>(mesh_list[index]);
-
         viewer.data().clear();
         viewer.data().set_mesh(V, F);
         viewer.data().set_face_based(true);
@@ -178,12 +165,10 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
         //    reset();
         //    return false;
         //}
-
         if (index != current_available_collapses - 1) {
             viewer.core().is_animating = false;
             return false;
         }
-
         // If animating then collapse 10% of edges
         if (viewer.core().is_animating && !Q.empty())
         {
@@ -279,13 +264,192 @@ void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, i
     }
 }
 
-// In progress
-void BasicScene::EdgesCostCalculation(auto mesh)
-{
-    int row_size = mesh[0]->data[0].vertexNormals.rows();
-    float vertex_norm;
+//////////////////////
 
-    for (int i = 0; i < row_size; i++) {
-        vertex_norm = mesh[0]->data[0].vertexNormals.row(i).normalized();
+// In progress
+void BasicScene::reset() {
+    F = OF;
+    V = OV;
+    edge_flaps(F, E, EMAP, EF, EI);
+    C.resize(E.rows(), V.cols());
+    VectorXd costs(E.rows());
+    // https://stackoverflow.com/questions/2852140/priority-queue-clear-method
+    // Q.clear();
+    Q = {};
+    EQ = Eigen::VectorXi::Zero(E.rows());
+    {
+        Eigen::VectorXd costs(E.rows());
+        igl::parallel_for(E.rows(), [&](const int e)
+            {
+                double cost = e;
+        RowVectorXd p(1, 3);
+        shortest_edge_and_midpoint(e, V, F, E, EMAP, EF, EI, cost, p);
+        C.row(e) = p;
+        costs(e) = cost;
+            }, 10000);
+        for (int e = 0;e < E.rows();e++)
+        {
+            Q.emplace(costs(e), e, 0);
+        }
     }
+
+    num_collapsed = 0;
+    viewer.data().clear();
+    viewer.data().set_mesh(V, F);
+    viewer.data().set_face_based(true);
+}
+
+// compute cost and potential placement and place in queue
+void BasicScene::edges_cost_calculation(int index, int edge, Eigen::MatrixXd& V)
+{
+    //vertexes of the edge
+    int v1 = E(edge, 0);
+    int v2 = E(edge, 1);
+
+    Eigen::Matrix4d Qedge = Qmatrix[index][v1] + Qmatrix[index][v2];
+
+    Eigen::Matrix4d Qposition = Qedge; //we will use this to find v` position
+    Qposition.row(3) = Eigen::Vector4d(0, 0, 0, 1);
+    Eigen::Vector4d vposition;
+    double cost;
+    bool isInversable;
+    Qposition.computeInverseWithCheck(Qposition, isInversable);
+    if (isInversable) {
+        vposition = Qposition * (Eigen::Vector4d(0, 0, 0, 1));
+        cost = vposition.transpose() * Qedge * vposition;
+    }
+    else {
+        //find min error from v1 v2 v1+v2/2
+        Eigen::Vector4d v1p;
+        v1p << V.row(v1), 1;;
+        double cost1 = v1p.transpose() * Qedge * v1p;
+
+        Eigen::Vector4d v2p;
+        v1p << V.row(v2), 1;;
+        double cost2 = v2p.transpose() * Qedge * v2p;
+
+        Eigen::Vector4d v12p;
+        v1p << ((V.row(v1) + V.row(v2)) / 2), 1;;
+        double cost3 = v12p.transpose() * Qedge * v12p;
+        if (cost1 < cost2 && cost1 < cost3) {
+            vposition = v1p;
+            cost = cost1;
+        }
+        else if (cost2 < cost1 && cost2 < cost3) {
+            vposition = v2p;
+            cost = cost2;
+        }
+        else {
+            vposition = v12p;
+            cost = cost3;
+        }
+    }
+    Eigen::Vector3d pos;
+    pos[0] = vposition[0];
+    pos[1] = vposition[1];
+    pos[2] = vposition[2];
+    C.row(edge) = pos;
+    Qit[index][edge] = Qx[index].insert(std::pair<double, int>(cost, edge)).first;
+}
+
+void BasicScene::simplificationX() {
+    int id = data().id;
+    Eigen::MatrixXd& V = data().V;  //vertice matrix
+    Eigen::MatrixXi& F = data().F; //faces matrix
+    bool something_collapsed = false;
+    // collapse edge
+    const int max_iter = std::ceil(0.05 * Qx[id].size());//collapse 5%
+    for (int j = 0; j < max_iter; j++)
+    {
+        if (!collapse_edgeX(V, F, id)) {
+            break;
+        }
+        something_collapsed = true;
+        num_collapsed++;
+    }
+
+    if (something_collapsed)
+    {
+        //data().clear();
+        data().set_mesh(V, F);
+        data().set_face_based(true);
+        data().dirty = 157;
+    }
+}
+
+bool BasicScene::collapse_edgeX(Eigen::MatrixXd& V, Eigen::MatrixXi& F, int id) {
+    PriorityQueue& curr_Q = Qx[id];
+    std::vector<PriorityQueue::iterator >& curr_Qit = Qit[id];
+    int e1, e2, f1, f2; //be used in the igl collapse_edge function
+    if (curr_Q.empty())
+    {
+        // no edges to collapse
+        return false;
+    }
+    std::pair<double, int> pair = *(curr_Q.begin());
+    if (pair.first == std::numeric_limits<double>::infinity())
+    {
+        // min cost edge is infinite cost
+        return false;
+    }
+    curr_Q.erase(curr_Q.begin()); //delete from the queue
+    int e = pair.second; //the lowest cost edge in the queue
+    //the 2 vertix of the edge
+    int v1 = E.row(e)[0];
+    int v2 = E.row(e)[1];
+
+    curr_Qit[e] = curr_Q.end();
+
+    //get the  list of faces around the end point the edge
+    std::vector<int> N = igl::circulation(e, true, EMAP, EF, EI);
+    std::vector<int> Nd = igl::circulation(e, false, EMAP, EF, EI);
+    N.insert(N.begin(), Nd.begin(), Nd.end());
+
+    //collapse the edges
+    bool is_collapsed = igl::collapse_edge(e, C.row(e), V, F, E, EMAP, EF, EI, e1, e2, f1, f2);
+    if (is_collapsed) {
+
+
+        // Erase the two, other collapsed edges
+        curr_Q.erase(curr_Qit[e1]);
+        curr_Qit[e1] = curr_Q.end();
+        curr_Q.erase(curr_Qit[e2]);
+        curr_Qit[e2] = curr_Q.end();
+
+        //update the Q matrix for the 2 veterixes we collapsed 
+        Qmatrix[id][v1] = Qmatrix[id][v1] + Qmatrix[id][v2];
+        Qmatrix[id][v2] = Qmatrix[id][v1] + Qmatrix[id][v2];
+
+        Eigen::VectorXd newPosition;
+        // update local neighbors
+        // loop over original face neighbors
+        for (auto n : N)
+        {
+            if (F(n, 0) != IGL_COLLAPSE_EDGE_NULL ||
+                F(n, 1) != IGL_COLLAPSE_EDGE_NULL ||
+                F(n, 2) != IGL_COLLAPSE_EDGE_NULL)
+            {
+                for (int v = 0; v < 3; v++)
+                {
+                    // get edge id
+                    const  int ei = EMAP(v* F.rows() + n);
+                    // erase old entry
+                    curr_Q.erase(curr_Qit[ei]);
+                    // compute cost and potential placement and place in queue
+                    edges_cost_calculation(id, ei, V);
+                    newPosition = C.row(ei);
+                }
+            }
+        }
+        std::cout << "edge " << e << ",cost " << pair.first << ",new position (" << newPosition[0] << ","
+            << newPosition[1] << "," << newPosition[2] << ")" << std::endl;
+    }
+    else
+    {
+        // reinsert with infinite weight (the provided cost function must **not**
+        // have given this un-collapsable edge inf cost already)
+        pair.first = std::numeric_limits<double>::infinity();
+        curr_Qit[e] = curr_Q.insert(pair).first;
+    }
+    return is_collapsed;
 }
