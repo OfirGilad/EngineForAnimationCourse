@@ -72,11 +72,6 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     V = mesh[0]->data[0].vertices;
     F = mesh[0]->data[0].faces;
 
-    
-
-    OF = F;
-    OV = V;
-
     // igl::read_triangle_mesh("data/cube.off",V,F);
     igl::edge_flaps(F,E,EMAP,EF,EI);
     //std::cout<< "vertices: \n" << V <<std::endl;
@@ -89,17 +84,18 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
 
     // New Code - Start
 
+    OF = F;
+    OV = V;
+
     igl::opengl::glfw::Viewer viewer;
     igl::min_heap< std::tuple<double, int, int> > Q;
+    vector<tuple<Eigen::MatrixXd, Eigen::MatrixXi>> mesh_list;
 
-    int MAX_COLLAPSES = 10;
+    //int MAX_COLLAPSES = 10;
     int index = 0;
     int current_available_collapses = 1;
-    vector<tuple<Eigen::MatrixXd, Eigen::MatrixXi>> mesh_list;
-    vector<int> num_collapsed_vector;
     bool manual_reset_selected = false;
-    bool block_collapses = false;
-    
+
 
     const auto& reset = [&]()
     {
@@ -107,10 +103,8 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
         {
             manual_reset_selected = false;
             mesh_list.clear();
-            mesh_list.push_back({ OV, OF });
+            mesh_list.push_back({OV, OF});
             current_available_collapses = 1;
-            num_collapsed_vector.clear();
-            num_collapsed_vector.push_back(0);
         }
 
         F = OF;
@@ -147,15 +141,46 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
 
     };
 
-    const auto& pre_draw = [&](igl::opengl::glfw::Viewer& viewer)->bool
+    const auto& level_up = [&]()
     {
-        // If started navigating, block option for collapses
-        if (block_collapses) {
-            return false;
+        index--;
+
+        if (index < 0) {
+            index = max(0, current_available_collapses - 1);
         }
 
-        if (index == MAX_COLLAPSES) {
-            reset();
+        V = get<0>(mesh_list[index]);
+        F = get<1>(mesh_list[index]);
+
+        viewer.data().clear();
+        viewer.data().set_mesh(V, F);
+        viewer.data().set_face_based(true);
+    };
+
+    const auto& level_down = [&]()
+    {
+        index++;
+
+        if (index >= current_available_collapses)
+            index = 0;
+
+        V = get<0>(mesh_list[index]);
+        F = get<1>(mesh_list[index]);
+
+        viewer.data().clear();
+        viewer.data().set_mesh(V, F);
+        viewer.data().set_face_based(true);
+    };
+
+    const auto& pre_draw = [&](igl::opengl::glfw::Viewer& viewer)->bool
+    {
+        //if (index == MAX_COLLAPSES) {
+        //    reset();
+        //    return false;
+        //}
+
+        if (index != current_available_collapses - 1) {
+            viewer.core().is_animating = false;
             return false;
         }
 
@@ -181,100 +206,12 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
                 viewer.data().set_mesh(V, F);
                 viewer.data().set_face_based(true);
                 viewer.core().is_animating = false;
-                current_available_collapses = min(current_available_collapses + 1, MAX_COLLAPSES + 1);
-                index = min(index + 1, MAX_COLLAPSES);
-
-                if (current_available_collapses != MAX_COLLAPSES + 1) {
-                    mesh_list.push_back({ V, F });
-                    num_collapsed_vector.push_back(num_collapsed);
-                }    
+                current_available_collapses++;
+                index++;
+                mesh_list.push_back({V, F});   
             }
         }
         return false;
-    };
-
-    const auto& level_up = [&]()
-    {
-        index -= 1;
-
-        if (index < 0) 
-        {
-            index = 0;
-            if (current_available_collapses != 1)
-            {
-                index = current_available_collapses - 1;
-            }
-        }
-
-        V = get<0>(mesh_list[index]);
-        F = get<1>(mesh_list[index]);
-        edge_flaps(F, E, EMAP, EF, EI);
-        C.resize(E.rows(), V.cols());
-        VectorXd costs(E.rows());
-        // https://stackoverflow.com/questions/2852140/priority-queue-clear-method
-        // Q.clear();
-        Q = {};
-        EQ = Eigen::VectorXi::Zero(E.rows());
-        {
-            Eigen::VectorXd costs(E.rows());
-            igl::parallel_for(E.rows(), [&](const int e)
-            {
-                double cost = e;
-                RowVectorXd p(1, 3);
-                shortest_edge_and_midpoint(e, V, F, E, EMAP, EF, EI, cost, p);
-                C.row(e) = p;
-                costs(e) = cost;
-            }, 10000);
-            for (int e = 0;e < E.rows();e++)
-            {
-                Q.emplace(costs(e), e, 0);
-            }
-        }
-
-        num_collapsed = num_collapsed_vector[index];
-        viewer.data().clear();
-        viewer.data().set_mesh(V, F);
-        viewer.data().set_face_based(true);
-    };
-
-    const auto& level_down = [&]()
-    {
-        index += 1;
-
-        if (index >= current_available_collapses)
-        {
-            index = 0;
-        }
-
-        V = get<0>(mesh_list[index]);
-        F = get<1>(mesh_list[index]);
-        edge_flaps(F, E, EMAP, EF, EI);
-        C.resize(E.rows(), V.cols());
-        VectorXd costs(E.rows());
-        // https://stackoverflow.com/questions/2852140/priority-queue-clear-method
-        // Q.clear();
-        Q = {};
-        EQ = Eigen::VectorXi::Zero(E.rows());
-        {
-            Eigen::VectorXd costs(E.rows());
-            igl::parallel_for(E.rows(), [&](const int e)
-            {
-                double cost = e;
-                RowVectorXd p(1, 3);
-                shortest_edge_and_midpoint(e, V, F, E, EMAP, EF, EI, cost, p);
-                C.row(e) = p;
-                costs(e) = cost;
-            }, 10000);
-            for (int e = 0;e < E.rows();e++)
-            {
-                Q.emplace(costs(e), e, 0);
-            }
-        }
-
-        num_collapsed = num_collapsed_vector[index];
-        viewer.data().clear();
-        viewer.data().set_mesh(V, F);
-        viewer.data().set_face_based(true);
     };
 
     const auto& key_down = [&](igl::opengl::glfw::Viewer& viewer, unsigned char key, int mod)->bool
@@ -286,20 +223,17 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
             break;
         case 'R':
         case 'r':
-            block_collapses = false;
             manual_reset_selected = true;
             reset();
             break;
         // Go UP
         case 'W':
         case 'w':
-            block_collapses = true;
             level_up();
             break;
         // Go DOWN
         case 'S':
         case 's':
-            block_collapses = true;
             level_down();
             break;
         default:
@@ -308,8 +242,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
         return true;
     };
 
-    mesh_list.push_back({ OV, OF });
-    num_collapsed_vector.push_back(0);
+    mesh_list.push_back({OV, OF});
     reset();
     viewer.core().background_color.setConstant(1);
     viewer.core().is_animating = false;
