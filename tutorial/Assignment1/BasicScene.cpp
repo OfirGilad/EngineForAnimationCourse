@@ -111,7 +111,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
 
     const auto& reset = [&]()
     {
-        if (manual_reset_selected == true)
+        if (manual_reset_selected)
         {
             manual_reset_selected = false;
             mesh_list.clear();
@@ -158,7 +158,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     const auto& pre_draw = [&](igl::opengl::glfw::Viewer& viewer)->bool
     {
         // If started navigating, block option for collapses
-        if (block_collapses == true) {
+        if (block_collapses) {
             return false;
         }
 
