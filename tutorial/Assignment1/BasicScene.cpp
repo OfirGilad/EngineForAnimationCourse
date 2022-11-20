@@ -24,6 +24,9 @@
 // #include "AutoMorphingModel.h"
 
 using namespace cg3d;
+using namespace std;
+using namespace Eigen;
+using namespace igl;
 
 void BasicScene::Init(float fov, int width, int height, float near, float far)
 {
@@ -64,19 +67,12 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     root->AddChild(cube);
     
     auto mesh = sphere1->GetMeshList();
-    Eigen::VectorXi EMAP;
-    Eigen::MatrixXi F,E,EF,EI;
-    Eigen::VectorXi EQ;
-    // If an edge were collapsed, we'd collapse it to these points:
-    Eigen::MatrixXd V, C;
-    int num_collapsed;
-
-    Eigen::MatrixXi OF;
-    Eigen::MatrixXd OV;
 
     // Function to reset original mesh and data structures
     V = mesh[0]->data[0].vertices;
     F = mesh[0]->data[0].faces;
+
+    
 
     OF = F;
     OV = V;
@@ -92,10 +88,6 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     //std::cout<< "edges indices: \n" << EI.transpose() <<std::endl;
 
     // New Code - Start
-
-    using namespace std;
-    using namespace Eigen;
-    using namespace igl;
 
     igl::opengl::glfw::Viewer viewer;
     igl::min_heap< std::tuple<double, int, int> > Q;
@@ -351,5 +343,16 @@ void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, i
             break;
         // New Code - End
         }
+    }
+}
+
+// In progress
+void BasicScene::EdgesCostCalculation(auto mesh)
+{
+    int row_size = mesh[0]->data[0].vertexNormals.rows();
+    float vertex_norm;
+
+    for (int i = 0; i < row_size; i++) {
+        vertex_norm = mesh[0]->data[0].vertexNormals.row(i).normalized();
     }
 }
