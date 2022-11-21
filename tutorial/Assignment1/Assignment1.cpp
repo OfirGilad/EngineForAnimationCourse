@@ -26,7 +26,7 @@ int main()
     auto viewport = std::make_shared<Viewport>("viewport",0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT);
     scene->Init(CAMERA_ANGLE, DISPLAY_WIDTH, DISPLAY_HEIGHT, NEAR, FAR);
     renderer.AddViewport(scene);
-    //display.LaunchRendering(true);
+    display.LaunchRendering(true);
 
     return 0;
 }

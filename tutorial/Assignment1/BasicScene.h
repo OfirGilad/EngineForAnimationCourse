@@ -41,6 +41,7 @@ public:
 private:
     std::shared_ptr<Movable> root;
     std::shared_ptr<cg3d::Model> camel, sphere1 ,cube;
+    std::shared_ptr<cg3d::Model> autoModel;
 
     // Global Variables
     igl::opengl::glfw::Viewer viewer;

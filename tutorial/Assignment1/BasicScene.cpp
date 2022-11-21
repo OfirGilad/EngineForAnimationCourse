@@ -21,7 +21,7 @@
 #include <vector>
 
 
-// #include "AutoMorphingModel.h"
+ #include "AutoMorphingModel.h"
 
 using namespace cg3d;
 using namespace std;
@@ -83,6 +83,11 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     //std::cout<< "edges indices: \n" << EI.transpose() <<std::endl;
 
     // New Code - Start
+
+    auto morph_function = [](Model* model, cg3d::Visitor* visitor) {
+        return (model->GetMeshList())[0]->data.size()-1;
+    };
+    autoModel = AutoMorphingModel::Create(*sphere1, morph_function);
 
     //int MAX_COLLAPSES = 10;
 
@@ -233,7 +238,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     viewer.core().is_animating = false;
     viewer.callback_key_down = key_down;
     viewer.callback_pre_draw = pre_draw;
-    viewer.launch();
+    //viewer.launch();
 
     // New Code - End
 }
@@ -258,6 +263,7 @@ void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, i
         {
         // New Code - Start
         case GLFW_KEY_SPACE:
+
             break;
         // New Code - End
         }
