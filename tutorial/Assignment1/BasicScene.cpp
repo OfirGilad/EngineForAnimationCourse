@@ -8,20 +8,19 @@
 
 #include <igl/circulation.h>
 #include <igl/collapse_edge.h>
-#include <igl/edge_flaps.h>
 #include <igl/decimate.h>
 #include <igl/shortest_edge_and_midpoint.h>
 #include <igl/parallel_for.h>
 #include <igl/read_triangle_mesh.h>
 #include <igl/opengl/glfw/Viewer.h>
+#include <igl/per_vertex_normals.h>
 #include <Eigen/Core>
 #include <iostream>
 #include <set>
 
 #include <vector>
 
-
- #include "AutoMorphingModel.h"
+#include "AutoMorphingModel.h"
 
 using namespace cg3d;
 using namespace std;
@@ -62,9 +61,9 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     camel->showWireframe = true;
     cube->showWireframe = true;
     camera->Translate(30, Axis::Z);
-    root->AddChild(sphere1);
-    root->AddChild(camel);
-    root->AddChild(cube);
+    //root->AddChild(sphere1);
+    //root->AddChild(camel);
+    //root->AddChild(cube);
     
     auto mesh = sphere1->GetMeshList();
 
@@ -85,160 +84,20 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     // New Code - Start
 
     auto morph_function = [](Model* model, cg3d::Visitor* visitor) {
-        return (model->GetMeshList())[0]->data.size()-1;
+        int current_index = model->meshIndex;
+        return (model->GetMeshList())[0]->data.size()*0+current_index;
     };
     autoModel = AutoMorphingModel::Create(*sphere1, morph_function);
-
-    //int MAX_COLLAPSES = 10;
+    root->AddChild(autoModel);
+    autoModel->Translate({ 0,0,25 });
 
     OF = F;
     OV = V;
-    int index = 0;
-    int current_available_collapses = 1;
-    bool manual_reset_selected = false;
-
-
-    const auto& reset = [&]()
-    {
-        if (manual_reset_selected)
-        {
-            manual_reset_selected = false;
-            mesh_list.clear();
-            mesh_list.push_back({OV, OF});
-            current_available_collapses = 1;
-        }
-        F = OF;
-        V = OV;
-        edge_flaps(F, E, EMAP, EF, EI);
-        C.resize(E.rows(), V.cols());
-        VectorXd costs(E.rows());
-        // https://stackoverflow.com/questions/2852140/priority-queue-clear-method
-        // Q.clear();
-        Q = {};
-        EQ = Eigen::VectorXi::Zero(E.rows());
-        {
-            Eigen::VectorXd costs(E.rows());
-            igl::parallel_for(E.rows(), [&](const int e)
-            {
-                double cost = e;
-                RowVectorXd p(1, 3);
-                shortest_edge_and_midpoint(e, V, F, E, EMAP, EF, EI, cost, p);
-                C.row(e) = p;
-                costs(e) = cost;
-            }, 10000);
-            for (int e = 0;e < E.rows();e++)
-            {
-                Q.emplace(costs(e), e, 0);
-            }
-        }
-        num_collapsed = 0;
-        viewer.data().clear();
-        viewer.data().set_mesh(V, F);
-        viewer.data().set_face_based(true);
-        index = 0;
-    };
-
-    const auto& level_up = [&]()
-    {
-        index--;
-        if (index < 0) {
-            index = max(0, current_available_collapses - 1);
-        }
-        V = get<0>(mesh_list[index]);
-        F = get<1>(mesh_list[index]);
-        viewer.data().clear();
-        viewer.data().set_mesh(V, F);
-        viewer.data().set_face_based(true);
-    };
-
-    const auto& level_down = [&]()
-    {
-        index++;
-        if (index >= current_available_collapses) {
-            index = 0;
-        }
-        V = get<0>(mesh_list[index]);
-        F = get<1>(mesh_list[index]);
-        viewer.data().clear();
-        viewer.data().set_mesh(V, F);
-        viewer.data().set_face_based(true);
-    };
-
-    const auto& pre_draw = [&](igl::opengl::glfw::Viewer& viewer)->bool
-    {
-        //if (index == MAX_COLLAPSES) {
-        //    reset();
-        //    return false;
-        //}
-        if (index != current_available_collapses - 1) {
-            viewer.core().is_animating = false;
-            return false;
-        }
-        // If animating then collapse 10% of edges
-        if (viewer.core().is_animating && !Q.empty())
-        {
-            bool something_collapsed = false;
-            // collapse edge
-            const int max_iter = std::ceil(0.01 * Q.size());
-            for (int j = 0;j < max_iter;j++)
-            {
-                if (!collapse_edge(shortest_edge_and_midpoint, V, F, E, EMAP, EF, EI, Q, EQ, C))
-                {
-                    break;
-                }
-                something_collapsed = true;
-                num_collapsed++;
-            }
-
-            if (something_collapsed)
-            {
-                viewer.data().clear();
-                viewer.data().set_mesh(V, F);
-                viewer.data().set_face_based(true);
-                viewer.core().is_animating = false;
-                current_available_collapses++;
-                index++;
-                mesh_list.push_back({V, F});   
-            }
-        }
-        return false;
-    };
-
-    const auto& key_down = [&](igl::opengl::glfw::Viewer& viewer, unsigned char key, int mod)->bool
-    {
-        switch (key)
-        {
-        case ' ':
-            viewer.core().is_animating ^= 1;
-            break;
-        case 'R':
-        case 'r':
-            manual_reset_selected = true;
-            reset();
-            break;
-        // Go UP
-        case 'W':
-        case 'w':
-            level_up();
-            break;
-        // Go DOWN
-        case 'S':
-        case 's':
-            level_down();
-            break;
-        default:
-            return false;
-        }
-        return true;
-    };
-
-    mesh_list.push_back({OV, OF});
+    index = 0;
+    current_available_collapses = 1;
+    manual_reset_selected = false;
+    
     reset();
-    viewer.core().background_color.setConstant(1);
-    viewer.core().is_animating = false;
-    viewer.callback_key_down = key_down;
-    viewer.callback_pre_draw = pre_draw;
-    //viewer.launch();
 
     // New Code - End
 }
@@ -257,26 +116,51 @@ void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, con
 void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, int scancode, int action, int mods)
 {
     if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-        igl::opengl::glfw::Viewer viewer;
 
         switch (key) // NOLINT(hicpp-multiway-paths-covered)
         {
-        // New Code - Start
         case GLFW_KEY_SPACE:
-
+            original_simplification();
             break;
-        // New Code - End
+        case GLFW_KEY_R:
+            manual_reset_selected = true;
+            reset();
+            break;
+        case GLFW_KEY_UP:
+            level_up();
+            break;
+        case GLFW_KEY_DOWN:
+            level_down();
+            break;
+        case GLFW_KEY_W:
+            camera->Rotate(-0.05, Axis::X);
+            break;
+        case GLFW_KEY_S:
+            camera->Rotate(0.05, Axis::X);
+            break;
+        case GLFW_KEY_A:
+            camera->Rotate(0.05, Axis::Y);
+            break;
+        case GLFW_KEY_D:
+            camera->Rotate(-0.05, Axis::Y);
+            break;
         }
     }
 }
 
-//////////////////////
-
-// In progress
 void BasicScene::reset() {
+    if (manual_reset_selected) {
+        manual_reset_selected = false;
+        auto mesh = autoModel->GetMeshList();
+        for (int i = 1; i < current_available_collapses; i++) {
+            mesh[0]->data.pop_back();
+        }
+        autoModel->SetMeshList(mesh);
+        current_available_collapses = 1;
+    }
     F = OF;
     V = OV;
-    edge_flaps(F, E, EMAP, EF, EI);
+    igl::edge_flaps(F, E, EMAP, EF, EI);
     C.resize(E.rows(), V.cols());
     VectorXd costs(E.rows());
     // https://stackoverflow.com/questions/2852140/priority-queue-clear-method
@@ -298,12 +182,69 @@ void BasicScene::reset() {
             Q.emplace(costs(e), e, 0);
         }
     }
-
     num_collapsed = 0;
-    viewer.data().clear();
-    viewer.data().set_mesh(V, F);
-    viewer.data().set_face_based(true);
+    index = 0;
+    autoModel->meshIndex = index;
 }
+
+void BasicScene::original_simplification()
+{
+    // If it isn't the last collapsed mesh, do nothing
+    if (index!=current_available_collapses-1) 
+    {
+        return;
+    }
+    // Collapse 10% of edges
+    if (!Q.empty())
+    {
+        bool something_collapsed = false;
+        // Collapse edge
+        const int max_iter = std::ceil(0.01 * Q.size());
+        for (int j = 0;j < max_iter;j++)
+        {
+            if (!collapse_edge(shortest_edge_and_midpoint, V, F, E, EMAP, EF, EI, Q, EQ, C))
+            {
+                break;
+            }
+            something_collapsed = true;
+            num_collapsed++;
+        }
+
+        if (something_collapsed)
+        {
+            current_available_collapses++;
+            index++;
+            igl::per_vertex_normals(V, F, N);
+            T = Eigen::MatrixXd::Zero(V.rows(), 2);
+            auto mesh = autoModel->GetMeshList();
+            mesh[0]->data.push_back({ V, F, N, T });
+            autoModel->SetMeshList(mesh);
+            autoModel->meshIndex = index;
+        }
+    }
+}
+
+void BasicScene::level_up()
+{
+    index--;
+    if (index < 0) 
+    {
+        index = max(0, current_available_collapses - 1);
+    }
+    autoModel->meshIndex = index;
+}
+
+void BasicScene::level_down()
+{
+    index++;
+    if (index >= current_available_collapses)
+    {
+        index = 0;
+    }
+    autoModel->meshIndex = index;;
+}
+
+// Part 2 - In Progress
 
 // compute cost and potential placement and place in queue
 void BasicScene::edges_cost_calculation(int index, int edge, Eigen::MatrixXd& V)
