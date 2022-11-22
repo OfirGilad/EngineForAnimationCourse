@@ -84,7 +84,8 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
 
     // New Code - Start
 
-    auto morph_function = [](Model* model, cg3d::Visitor* visitor) {
+    auto morph_function = [](Model* model, cg3d::Visitor* visitor) 
+    {
         int current_index = model->meshIndex;
         return (model->GetMeshList())[0]->data.size()*0+current_index;
     };
@@ -98,8 +99,8 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     current_available_collapses = 1;
     manual_reset_selected = false;
     
-    //new_reset();
     reset();
+    //new_reset();
 
     // New Code - End
 }
@@ -152,7 +153,8 @@ void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, i
     }
 }
 
-void BasicScene::set_mesh_data() {
+void BasicScene::set_mesh_data() 
+{
     igl::per_vertex_normals(V, F, N);
     T = Eigen::MatrixXd::Zero(V.rows(), 2);
     auto mesh = autoModel->GetMeshList();
@@ -161,7 +163,8 @@ void BasicScene::set_mesh_data() {
     autoModel->meshIndex = index;
 }
 
-void BasicScene::reset() {
+void BasicScene::reset() 
+{
     if (manual_reset_selected) {
         manual_reset_selected = false;
         auto mesh = autoModel->GetMeshList();
@@ -256,11 +259,14 @@ void BasicScene::level_down()
 // Part 2 - In Progress
 /////////////////////////////////////////////////////////
 
-void BasicScene::new_reset() {
-    if (manual_reset_selected) {
+void BasicScene::new_reset() 
+{
+    if (manual_reset_selected) 
+    {
         manual_reset_selected = false;
         auto mesh = autoModel->GetMeshList();
-        for (int i = 1; i < current_available_collapses; i++) {
+        for (int i = 1; i < current_available_collapses; i++) 
+        {
             mesh[0]->data.pop_back();
         }
         autoModel->SetMeshList(mesh);
@@ -270,10 +276,11 @@ void BasicScene::new_reset() {
     V = OV;
     igl::edge_flaps(F, E, EMAP, EF, EI);
     C.resize(E.rows(), V.cols());
-    VectorXd costs(E.rows());
+    Qit.resize(E.rows());
+
     // https://stackoverflow.com/questions/2852140/priority-queue-clear-method
-    // new_Q.clear();
-    new_Q = {};
+    new_Q.clear();
+    // new_Q = {};
 
     Q_matrix_calculation();
     for (int i = 0; i < E.rows(); i++)
@@ -285,7 +292,8 @@ void BasicScene::new_reset() {
     autoModel->meshIndex = index;
 }
 
-void BasicScene::Q_matrix_calculation() {
+void BasicScene::Q_matrix_calculation() 
+{
     std::vector<std::vector<int>> VF;  //vertex to faces
     std::vector<std::vector<int>> VFi; //not used
     int n = V.rows();
@@ -296,12 +304,14 @@ void BasicScene::Q_matrix_calculation() {
     Eigen::MatrixXd F_normals = mesh[0]->data[0].vertexNormals;
 
 
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) 
+    {
         //initialize 
         Qmatrix[i] = Eigen::Matrix4d::Zero();
 
         //caculate vertex Q matrix 
-        for (int j = 0; j < VF[i].size(); j++) {
+        for (int j = 0; j < VF[i].size(); j++) 
+        {
             // Checking that the vertex number isn't too big
             if (VF[i][j] >= n) {
                 continue;
@@ -338,11 +348,13 @@ void BasicScene::edges_cost_calculation(int edge)
     double cost;
     bool isInversable;
     Qposition.computeInverseWithCheck(Qposition, isInversable);
-    if (isInversable) {
+    if (isInversable) 
+    {
         vposition = Qposition * (Eigen::Vector4d(0, 0, 0, 1));
         cost = vposition.transpose() * Qedge * vposition;
     }
-    else {
+    else 
+    {
         //find min error from v1 v2 v1+v2/2
         Eigen::Vector4d v1p;
         v1p << V.row(v1), 1;;
@@ -355,15 +367,18 @@ void BasicScene::edges_cost_calculation(int edge)
         Eigen::Vector4d v12p;
         v1p << ((V.row(v1) + V.row(v2)) / 2), 1;;
         double cost3 = v12p.transpose() * Qedge * v12p;
-        if (cost1 < cost2 && cost1 < cost3) {
+        if (cost1 < cost2 && cost1 < cost3) 
+        {
             vposition = v1p;
             cost = cost1;
         }
-        else if (cost2 < cost1 && cost2 < cost3) {
+        else if (cost2 < cost1 && cost2 < cost3) 
+        {
             vposition = v2p;
             cost = cost2;
         }
-        else {
+        else 
+        {
             vposition = v12p;
             cost = cost3;
         }
@@ -376,7 +391,8 @@ void BasicScene::edges_cost_calculation(int edge)
     Qit[edge] = new_Q.insert(std::pair<double, int>(cost, edge)).first;
 }
 
-void BasicScene::new_simplification() {
+void BasicScene::new_simplification() 
+{
     bool something_collapsed = false;
     // collapse edge
     const int max_iter = std::ceil(0.05 * new_Q.size()); //collapse 5%
@@ -427,8 +443,8 @@ bool BasicScene::new_collapse_edge() {
 
     //collapse the edges
     bool is_collapsed = igl::collapse_edge(e, C.row(e), V, F, E, EMAP, EF, EI, e1, e2, f1, f2);
-    if (is_collapsed) {
-
+    if (is_collapsed) 
+    {
         // Erase the two, other collapsed edges
         curr_Q.erase(curr_Qit[e1]);
         curr_Qit[e1] = curr_Q.end();
