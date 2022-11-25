@@ -28,31 +28,22 @@ public:
     explicit BasicScene(std::string name, cg3d::Display* display) : Scene(std::move(name), display) {};
     void Init(float fov, int width, int height, float near, float far);
     void Update(const cg3d::Program& program, const Eigen::Matrix4f& proj, const Eigen::Matrix4f& view, const Eigen::Matrix4f& model) override;
-
     void KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, int scancode, int action, int mods) override;
+
     void set_mesh_data();
-    void reset();
+    void original_reset();
     void original_simplification();
     void level_up();
     void level_down();
 
     // Part 2 - In Progress
 
-    //void new_reset();
-    //void Q_matrix_calculation();
-    //void edges_cost_calculation(int edge);
-    //void new_simplification();
-    //bool new_collapse_edge();
-
-    ///
-
+    void new_reset();
     void initData();
-    void resizeDataStructers(int size);
-    void initData(int i);
-    void Q_matrix_calculation(Eigen::MatrixXd& V, Eigen::MatrixXi& F, int index);
-    void edges_cost_calculation(int index, int edge, Eigen::MatrixXd& V);
+    void Q_matrix_calculation();
+    void edges_cost_calculation(int edge);
     void new_simplification();
-    bool new_collapse_edge(Eigen::MatrixXd& V, Eigen::MatrixXi& F, int id);
+    bool new_collapse_edge();
 
 
 private:
@@ -63,28 +54,24 @@ private:
     // Global Variables
     igl::min_heap<std::tuple<double, int, int>> Q;
 
-    //Eigen::VectorXi EMAP;
-    //Eigen::MatrixXi F,E,EF,EI;
-    //Eigen::VectorXi EQ;
-    //Eigen::MatrixXd V, C;
+    Eigen::VectorXi EMAP;
+    Eigen::MatrixXi F,E,EF,EI;
+    Eigen::VectorXi EQ;
+    Eigen::MatrixXd V, C;
 
     Eigen::MatrixXi OF;
     Eigen::MatrixXd OV;
     Eigen::MatrixXd VN, FN, T;
 
-    //int num_collapsed;
+    int num_collapsed;
     int index;
     int current_available_collapses;
     bool manual_reset_selected;
 
     // Part 2 - In Progress
 
-    Eigen::VectorXi EMAP; //edages to faces
-    Eigen::MatrixXi E, EF, EI;
-    typedef std::set<std::pair<double, int> > PriorityQueue;
-    std::vector < PriorityQueue> new_Q;		//priority queue - cost for every edge
-    std::vector < std::vector<PriorityQueue::iterator > > Qit;
-    std::vector < Eigen::MatrixXd> C; ///positions 
-    std::vector < std::vector <Eigen::Matrix4d> > Qmatrix; //list of Q matrix for each vertical
-    std::vector<int> num_collapsed;
+    typedef std::set<std::pair<double, int>> PriorityQueue;
+    PriorityQueue new_Q;		                            // priority queue - cost for every edge
+    std::vector<PriorityQueue::iterator> Qit;
+    std::vector <Eigen::Matrix4d> Qmatrix;                  // list of Q matrix for each vertical
 };
