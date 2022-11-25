@@ -38,11 +38,21 @@ public:
 
     // Part 2 - In Progress
 
-    void new_reset();
-    void Q_matrix_calculation();
-    void edges_cost_calculation(int edge);
+    //void new_reset();
+    //void Q_matrix_calculation();
+    //void edges_cost_calculation(int edge);
+    //void new_simplification();
+    //bool new_collapse_edge();
+
+    ///
+
+    void initData();
+    void resizeDataStructers(int size);
+    void initData(int i);
+    void Q_matrix_calculation(Eigen::MatrixXd& V, Eigen::MatrixXi& F, int index);
+    void edges_cost_calculation(int index, int edge, Eigen::MatrixXd& V);
     void new_simplification();
-    bool new_collapse_edge();
+    bool new_collapse_edge(Eigen::MatrixXd& V, Eigen::MatrixXi& F, int id);
 
 
 private:
@@ -53,25 +63,28 @@ private:
     // Global Variables
     igl::min_heap<std::tuple<double, int, int>> Q;
 
-    Eigen::VectorXi EMAP;
-    Eigen::MatrixXi F,E,EF,EI;
-    Eigen::VectorXi EQ;
-    // If an edge were collapsed, we'd collapse it to these points:
-    Eigen::MatrixXd V, C;
+    //Eigen::VectorXi EMAP;
+    //Eigen::MatrixXi F,E,EF,EI;
+    //Eigen::VectorXi EQ;
+    //Eigen::MatrixXd V, C;
 
     Eigen::MatrixXi OF;
     Eigen::MatrixXd OV;
-    Eigen::MatrixXd N, T;
+    Eigen::MatrixXd VN, FN, T;
 
-    int num_collapsed;
+    //int num_collapsed;
     int index;
     int current_available_collapses;
     bool manual_reset_selected;
 
     // Part 2 - In Progress
 
-    typedef std::set<std::pair<double, int>> PriorityQueue;
-    PriorityQueue new_Q;
-    std::vector<PriorityQueue::iterator> Qit;
-    std::vector<Eigen::Matrix4d> Qmatrix;
+    Eigen::VectorXi EMAP; //edages to faces
+    Eigen::MatrixXi E, EF, EI;
+    typedef std::set<std::pair<double, int> > PriorityQueue;
+    std::vector < PriorityQueue> new_Q;		//priority queue - cost for every edge
+    std::vector < std::vector<PriorityQueue::iterator > > Qit;
+    std::vector < Eigen::MatrixXd> C; ///positions 
+    std::vector < std::vector <Eigen::Matrix4d> > Qmatrix; //list of Q matrix for each vertical
+    std::vector<int> num_collapsed;
 };
