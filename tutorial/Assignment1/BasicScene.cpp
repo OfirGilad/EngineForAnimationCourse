@@ -371,6 +371,7 @@ void BasicScene::edges_cost_calculation(int edge)
         Eigen::Vector4d v1v2_position;
         v1v2_position << ((V.row(v1) + V.row(v2)) / 2), 1;
         double cost3 = v1v2_position.transpose() * Q_edge * v1v2_position;
+
         if (cost1 < cost2 && cost1 < cost3) 
         {
             v_position = v1_position;
@@ -425,7 +426,7 @@ void BasicScene::new_simplification()
 bool BasicScene::new_collapse_edge() 
 {
     PriorityQueue& curr_Q = new_Q;
-    std::vector<PriorityQueue::iterator >& curr_Q_iter = Q_iter;
+    std::vector<PriorityQueue::iterator>& curr_Q_iter = Q_iter;
     int e1, e2, f1, f2; // Will be used in the igl collapse_edge function
     if (curr_Q.empty())
     {
@@ -441,12 +442,12 @@ bool BasicScene::new_collapse_edge()
     curr_Q.erase(curr_Q.begin()); // Delete from the queue
     int e = pair.second; // The lowest cost edge in the queue
 
-    // The 2 vertix of the edge
+    // The 2 vertices of the edge
     int v1 = E.row(e)[0];
     int v2 = E.row(e)[1];
     curr_Q_iter[e] = curr_Q.end();
 
-    // Get the  list of faces around the end point the edge
+    // Get the list of faces around the end point the edge
     std::vector<int> N = igl::circulation(e, true, EMAP, EF, EI);
     std::vector<int> Nd = igl::circulation(e, false, EMAP, EF, EI);
     N.insert(N.begin(), Nd.begin(), Nd.end());
@@ -464,7 +465,7 @@ bool BasicScene::new_collapse_edge()
         // Update the Q matrix for the 2 veterixes we collapsed 
         Q_matrix[v1] = Q_matrix[v1] + Q_matrix[v2];
         Q_matrix[v2] = Q_matrix[v1] + Q_matrix[v2];
-        Eigen::VectorXd newPosition;
+        Eigen::VectorXd new_position;
 
         // Update local neighbors
         // Loop over original face neighbors
@@ -477,18 +478,18 @@ bool BasicScene::new_collapse_edge()
                 for (int v = 0; v < 3; v++)
                 {
                     // Get edge id
-                    const  int ei = EMAP(v* F.rows() + n);
+                    const int ei = EMAP(v * F.rows() + n);
                     // Erase old entry
                     curr_Q.erase(curr_Q_iter[ei]);
                     // Compute cost and potential placement and place in queue
                     edges_cost_calculation(ei);
-                    newPosition = C.row(ei);
+                    new_position = C.row(ei);
                 }
             }
         }
         cout << "Edge: " << e 
             << ", Cost: " << pair.first 
-            << ", New Position: (" << newPosition[0] << "," << newPosition[1] << "," << newPosition[2] << ")" 
+            << ", New Position: (" << new_position[0] << "," << new_position[1] << "," << new_position[2] << ")"
             << std::endl;
     }
     else
