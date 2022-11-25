@@ -30,13 +30,15 @@ public:
     void Update(const cg3d::Program& program, const Eigen::Matrix4f& proj, const Eigen::Matrix4f& view, const Eigen::Matrix4f& model) override;
     void KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, int scancode, int action, int mods) override;
 
+    // Part 1
+
     void set_mesh_data();
     void original_reset();
     void original_simplification();
     void level_up();
     void level_down();
 
-    // Part 2 - In Progress
+    // Part 2
 
     void new_reset();
     void initData();
@@ -51,9 +53,6 @@ private:
     std::shared_ptr<cg3d::Model> bunny, sphere1 ,cube;
     std::shared_ptr<cg3d::Model> autoModel;
 
-    // Global Variables
-    igl::min_heap<std::tuple<double, int, int>> Q;
-
     Eigen::VectorXi EMAP;
     Eigen::MatrixXi F,E,EF,EI;
     Eigen::VectorXi EQ;
@@ -63,15 +62,18 @@ private:
     Eigen::MatrixXd OV;
     Eigen::MatrixXd VN, FN, T;
 
+    // Part 1
+
+    igl::min_heap<std::tuple<double, int, int>> original_Q;
     int num_collapsed;
     int index;
     int current_available_collapses;
     bool manual_reset_selected;
 
-    // Part 2 - In Progress
+    // Part 2
 
     typedef std::set<std::pair<double, int>> PriorityQueue;
-    PriorityQueue new_Q;		                            // priority queue - cost for every edge
+    PriorityQueue new_Q; // priority queue - cost for every edge
     std::vector<PriorityQueue::iterator> Qit;
-    std::vector <Eigen::Matrix4d> Qmatrix;                  // list of Q matrix for each vertical
+    std::vector <Eigen::Matrix4d> Qmatrix; // list of Q matrix for each vertical
 };

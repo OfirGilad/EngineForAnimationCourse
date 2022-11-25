@@ -84,8 +84,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     //std::cout<< "faces to edges: \n "<< EMAP.transpose()<<std::endl;
     //std::cout<< "edges indices: \n" << EI.transpose() <<std::endl;
 
-    // New Code - Start
-
+    // Start of new code
     auto morph_function = [](Model* model, cg3d::Visitor* visitor) 
     {
         int current_index = model->meshIndex;
@@ -103,8 +102,6 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
 
     //original_reset();
     new_reset();
-    
-    // New Code - End
 }
 
 void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, const Eigen::Matrix4f& view, const Eigen::Matrix4f& model)
@@ -155,6 +152,10 @@ void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, i
     }
 }
 
+/////////////////////////////////////////////////////////
+// Part 1
+/////////////////////////////////////////////////////////
+
 void BasicScene::set_mesh_data()
 {
     igl::per_vertex_normals(V, F, VN);
@@ -184,8 +185,8 @@ void BasicScene::original_reset()
     C.resize(E.rows(), V.cols());
     VectorXd costs(E.rows());
     // https://stackoverflow.com/questions/2852140/priority-queue-clear-method
-    // Q.clear();
-    Q = {};
+    // original_Q.clear();
+    original_Q = {};
     EQ = Eigen::VectorXi::Zero(E.rows());
     {
         Eigen::VectorXd costs(E.rows());
@@ -199,7 +200,7 @@ void BasicScene::original_reset()
         }, 10000);
         for (int e = 0;e < E.rows();e++)
         {
-            Q.emplace(costs(e), e, 0);
+            original_Q.emplace(costs(e), e, 0);
         }
     }
     num_collapsed = 0;
@@ -215,21 +216,20 @@ void BasicScene::original_simplification()
         return;
     }
     // Collapse 10% of edges
-    if (!Q.empty())
+    if (!original_Q.empty())
     {
         bool something_collapsed = false;
         // Collapse edge
-        const int max_iter = std::ceil(0.01 * Q.size());
+        const int max_iter = std::ceil(0.01 * original_Q.size());
         for (int j = 0;j < max_iter;j++)
         {
-            if (!collapse_edge(shortest_edge_and_midpoint, V, F, E, EMAP, EF, EI, Q, EQ, C))
+            if (!collapse_edge(shortest_edge_and_midpoint, V, F, E, EMAP, EF, EI, original_Q, EQ, C))
             {
                 break;
             }
             something_collapsed = true;
             num_collapsed++;
         }
-
         if (something_collapsed)
         {
             current_available_collapses++;
@@ -260,7 +260,7 @@ void BasicScene::level_down()
 }
 
 /////////////////////////////////////////////////////////
-// Part 2 - In Progress
+// Part 2
 /////////////////////////////////////////////////////////
 
 void BasicScene::new_reset()
@@ -291,6 +291,7 @@ void BasicScene::initData()
     Q_matrix_calculation();
     new_Q.clear();
     num_collapsed = 0;
+
     // Caculate egdes cost
     for (int j = 0; j < E.rows(); j++) 
     {
@@ -301,11 +302,10 @@ void BasicScene::initData()
 void BasicScene::Q_matrix_calculation() 
 {
     std::vector<std::vector<int> > VF;  // Vertex to faces
-    std::vector<std::vector<int> > VFi; // Not used
+    std::vector<std::vector<int> > VFi; // Not in use
     int n = V.rows();
     Qmatrix.resize(n);
     igl::vertex_triangle_adjacency(n, F, VF, VFi);
-
     igl::per_face_normals(V, F, FN);
     Eigen::MatrixXd F_normals = FN;
 
@@ -317,8 +317,9 @@ void BasicScene::Q_matrix_calculation()
         // Caculate vertex Q matrix 
         for (int j = 0; j < VF[i].size(); j++) 
         {
-            Eigen::Vector3d normal = F_normals.row(VF[i][j]).normalized();//get face normal
-            // the equation is ax+by+cz+d=0
+            // Get face normal
+            Eigen::Vector3d normal = F_normals.row(VF[i][j]).normalized();
+            // The equation is: ax+by+cz+d=0
             Eigen::Matrix4d curr;
             double a = normal[0];
             double b = normal[1];
@@ -339,10 +340,10 @@ void BasicScene::edges_cost_calculation(int edge)
     // Vertexes of the edge
     int v1 = E(edge, 0);
     int v2 = E(edge, 1);
-
     Eigen::Matrix4d Qedge = Qmatrix[v1] + Qmatrix[v2];
 
-    Eigen::Matrix4d Qposition = Qedge; // We will use this to find v' position
+    // We will use this to find v' position
+    Eigen::Matrix4d Qposition = Qedge; 
     Qposition.row(3) = Eigen::Vector4d(0, 0, 0, 1);
     Eigen::Vector4d vposition;
     double cost;
@@ -355,7 +356,7 @@ void BasicScene::edges_cost_calculation(int edge)
     }
     else 
     {
-        // Find min error from v1 v2 v1+v2/2
+        // Find min error from v1, v2, (v1+v2)/2
         Eigen::Vector4d v1p;
         v1p << V.row(v1), 1;
         double cost1 = v1p.transpose() * Qedge * v1p;
@@ -397,12 +398,10 @@ void BasicScene::new_simplification()
     {
         return;
     }
-    Eigen::MatrixXd& V = data().V; // Vertice matrix
-    Eigen::MatrixXi& F = data().F; // Faces matrix
     bool something_collapsed = false;
 
-    // Collapse edge
-    const int max_iter = std::ceil(0.05 * new_Q.size()); // Collapse 5%
+    // Collapse 10% of edges
+    const int max_iter = std::ceil(0.01 * new_Q.size()); 
     for (int j = 0; j < max_iter; j++)
     {
         if (!new_collapse_edge()) 
@@ -438,10 +437,10 @@ bool BasicScene::new_collapse_edge()
     }
     curr_Q.erase(curr_Q.begin()); // Delete from the queue
     int e = pair.second; // The lowest cost edge in the queue
+
     // The 2 vertix of the edge
     int v1 = E.row(e)[0];
     int v2 = E.row(e)[1];
-
     curr_Qit[e] = curr_Q.end();
 
     // Get the  list of faces around the end point the edge
@@ -462,8 +461,8 @@ bool BasicScene::new_collapse_edge()
         // Update the Q matrix for the 2 veterixes we collapsed 
         Qmatrix[v1] = Qmatrix[v1] + Qmatrix[v2];
         Qmatrix[v2] = Qmatrix[v1] + Qmatrix[v2];
-
         Eigen::VectorXd newPosition;
+
         // Update local neighbors
         // Loop over original face neighbors
         for (auto n : N)
