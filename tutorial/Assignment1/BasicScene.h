@@ -41,7 +41,7 @@ public:
     // Part 2
 
     void new_reset();
-    void initData();
+    void init_data();
     void Q_matrix_calculation();
     void edges_cost_calculation(int edge);
     void new_simplification();

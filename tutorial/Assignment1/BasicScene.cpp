@@ -278,12 +278,12 @@ void BasicScene::new_reset()
     }
     V = OV;
     F = OF;
-    initData();
+    init_data();
     index = 0;
     autoModel->meshIndex = index;
 }
 
-void BasicScene::initData() 
+void BasicScene::init_data()
 {
     igl::edge_flaps(F, E, EMAP, EF, EI); // Init data_structures
     C.resize(E.rows(), V.cols());
