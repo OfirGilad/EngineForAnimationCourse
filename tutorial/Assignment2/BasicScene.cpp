@@ -6,8 +6,9 @@
 #include "igl/read_triangle_mesh.cpp"
 #include "igl/edge_flaps.h"
 #include "igl/AABB.h"
+#include "igl/per_vertex_normals.h"
 
-// #include "AutoMorphingModel.h"
+#include "AutoMorphingModel.h"
 
 using namespace cg3d;
 
@@ -38,14 +39,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     cyl = Model::Create( "cyl", cylMesh, material);
     cube = Model::Create( "cube", cubeMesh, material);*/
 
-    object1 = Model::Create("sphere", sphereMesh, material);
-    object2 = Model::Create("sphere", sphereMesh, material);
-
-    object1->showWireframe = true;
-    object2->showWireframe = true;
-
-    object1->Translate({ -2, 0, 0 });
-    object2->Translate({ 2, 0, 0 });
+    
 
     //sphere1->Scale(2);
     //sphere1->showWireframe = true;
@@ -58,9 +52,6 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     //root->AddChild(sphere1);
     //root->AddChild(cyl);
     //root->AddChild(cube);
-
-    root->AddChild(object1);
-    root->AddChild(object2);
     
     //auto mesh = cube->GetMeshList();
     //Eigen::VectorXi EMAP;
@@ -84,21 +75,49 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     //std::cout<< "edges indices: \n" << EI.transpose() <<std::endl;
 
     // Start of new code
+    object1 = Model::Create("sphere", sphereMesh, material);
+    object2 = Model::Create("sphere", sphereMesh, material);
+
+    object1->showWireframe = true;
+    object2->showWireframe = true;
+
+    auto morph_function = [](Model* model, cg3d::Visitor* visitor)
+    {
+        int current_index = model->meshIndex;
+        return (model->GetMeshList())[0]->data.size() - 1;
+    };
+    autoModel1 = AutoMorphingModel::Create(*object1, morph_function);
+    root->AddChild(autoModel1);
+    autoModel1->Translate({ -2, 0, 0 });
+
+    autoModel2 = AutoMorphingModel::Create(*object2, morph_function);
+    root->AddChild(autoModel2);
+    autoModel2->Translate({ 2, 0, 0 });
+
     Eigen::MatrixXi F1, F2;
     Eigen::MatrixXd V1, V2;
 
-    auto mesh = object1->GetMeshList();
+    auto mesh = autoModel1->GetMeshList();
     V1 = mesh[0]->data[0].vertices;
     F1 = mesh[0]->data[0].faces;
-    igl::AABB<Eigen::MatrixXd, 3> object1Tree;
     object1Tree.init(V1, F1);
 
-    mesh = object2->GetMeshList();
+    mesh = autoModel2->GetMeshList();
     V2 = mesh[0]->data[0].vertices;
     F2 = mesh[0]->data[0].faces;
-    igl::AABB<Eigen::MatrixXd, 3> object2Tree;
     object2Tree.init(V2, F2);
 
+
+    /*data().set_mesh(V1, F1);
+    DrawObjectBox(object1Tree.m_box);
+    V1 = data().V;
+    F1 = data().F;
+    Eigen::MatrixXd VN, T;
+    igl::per_vertex_normals(V1, F1, VN);
+    T = Eigen::MatrixXd::Zero(V1.rows(), 2);
+    mesh = autoModel1->GetMeshList();
+    mesh[0]->data.push_back({ V1, F1, VN, T });
+    autoModel1->SetMeshList(mesh);*/
 
 
     object_velocity_x = 0.001;
@@ -112,7 +131,7 @@ void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, con
     program.SetUniform4f("Kai", 1.0f, 1.0f, 1.0f, 1.0f);
     //cube->Rotate(0.01f, Axis::All);
 
-    object1->Translate({ object_velocity_x, object_velocity_y, 0 });
+    autoModel1->Translate({ object_velocity_x, object_velocity_y, 0 });
 }
 
 void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, int scancode, int action, int mods)
@@ -143,4 +162,30 @@ void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, i
             break;
         }
     }
+}
+
+void BasicScene::DrawObjectBox(Eigen::AlignedBox<double, 3>& aligned_box) {
+    Eigen::RowVector3d color_vector = Eigen::RowVector3d(0, 0, 255);
+
+    Eigen::RowVector3d BottomRightCeil = aligned_box.corner(aligned_box.BottomRightCeil);
+    Eigen::RowVector3d BottomRightFloor = aligned_box.corner(aligned_box.BottomRightFloor);
+    Eigen::RowVector3d BottomLeftCeil = aligned_box.corner(aligned_box.BottomLeftCeil);
+    Eigen::RowVector3d BottomLeftFloor = aligned_box.corner(aligned_box.BottomLeftFloor);
+    Eigen::RowVector3d TopRightCeil = aligned_box.corner(aligned_box.TopRightCeil);
+    Eigen::RowVector3d TopRightFloor = aligned_box.corner(aligned_box.TopRightFloor);
+    Eigen::RowVector3d TopLeftCeil = aligned_box.corner(aligned_box.TopLeftCeil);
+    Eigen::RowVector3d TopLeftFloor = aligned_box.corner(aligned_box.TopLeftFloor);
+
+    data().add_edges(BottomLeftCeil, BottomRightCeil, color_vector);
+    data().add_edges(BottomLeftCeil, BottomLeftFloor, color_vector);
+    data().add_edges(BottomRightCeil, BottomRightFloor, color_vector);
+    data().add_edges(BottomLeftFloor, BottomRightFloor, color_vector);
+    data().add_edges(TopLeftCeil, TopRightCeil, color_vector);
+    data().add_edges(TopRightCeil, TopRightFloor, color_vector);
+    data().add_edges(TopLeftCeil, TopLeftFloor, color_vector);
+    data().add_edges(TopLeftFloor, TopRightFloor, color_vector);
+    data().add_edges(TopLeftCeil, BottomLeftCeil, color_vector);
+    data().add_edges(TopRightFloor, BottomRightFloor, color_vector);
+    data().add_edges(TopRightCeil, BottomRightCeil, color_vector);
+    data().add_edges(TopLeftFloor, BottomLeftFloor, color_vector);
 }
