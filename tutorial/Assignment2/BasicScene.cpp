@@ -151,7 +151,7 @@ void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, con
 
         if (print_collision_status) {
             print_collision_status = false;
-            std::cout << "Collision Detected" << std::endl;
+            std::cout << "Collision Detected!" << std::endl;
         } 
     }
     else {

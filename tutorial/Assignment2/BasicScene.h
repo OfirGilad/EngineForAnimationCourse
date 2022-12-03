@@ -17,6 +17,15 @@ public:
     bool CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* aligned_box1, igl::AABB<Eigen::MatrixXd, 3>* aligned_box2);
     bool BoxesIntersectionCheck(Eigen::AlignedBox<double, 3>& aligned_box1, Eigen::AlignedBox<double, 3>& aligned_box2);
 
+    // Simplification support
+    void set_mesh_data(int object_index);
+    void new_reset(int object_index);
+    void init_data(int object_index);
+    void Q_matrix_calculation(int object_index);
+    void edges_cost_calculation(int edge, int object_index);
+    void new_simplification(int object_index);
+    bool new_collapse_edge(int object_index);
+
 private:
     std::shared_ptr<Movable> root;
     std::shared_ptr<cg3d::Model> cyl, sphere1 ,cube;
@@ -27,4 +36,19 @@ private:
     float object_velocity_x, object_velocity_y;
     float object1_rotation_z, object2_rotation_z;
     bool print_collision_status;
+
+    // Simplification support
+    std::vector<Eigen::VectorXi> EMAP;
+    std::vector<Eigen::MatrixXi> F, E, EF, EI;
+    std::vector<Eigen::VectorXi> EQ;
+    std::vector<Eigen::MatrixXd> V, C;
+
+    std::vector<Eigen::MatrixXi> OF;
+    std::vector<Eigen::MatrixXd> OV;
+    std::vector<Eigen::MatrixXd> VN, FN, T;
+
+    typedef std::set<std::pair<double, int>> PriorityQueue;
+    std::vector<PriorityQueue> new_Q; // priority queue - cost for every edge
+    std::vector<std::vector<PriorityQueue::iterator>> Q_iter;
+    std::vector<std::vector<Eigen::Matrix4d>> Q_matrix; // list of Q matrix for each vertical
 };
