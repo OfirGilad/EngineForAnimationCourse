@@ -14,10 +14,13 @@ public:
     void KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, int scancode, int action, int mods) override;
 
     void DrawObjectBox(Eigen::AlignedBox<double, 3>& aligned_box, Eigen::RowVector3d color_vector);
-    bool CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* aligned_box1, igl::AABB<Eigen::MatrixXd, 3>* aligned_box2);
+    bool CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* aligned_box1, igl::AABB<Eigen::MatrixXd, 3>* aligned_box2, int level);
     bool BoxesIntersectionCheck(Eigen::AlignedBox<double, 3>& aligned_box1, Eigen::AlignedBox<double, 3>& aligned_box2);
 
-    // Simplification support
+    // Simplification Support
+    void level_up(int object_index);
+    void level_down(int object_index);
+    void level_reset(int object_index);
     void set_mesh_data(int object_index);
     void new_reset();
     void init_data(int object_index);
@@ -40,6 +43,7 @@ private:
     bool print_collision_status;
 
     // Simplification support
+    int max_support;
     std::vector<int> num_collapsed;
     std::vector<int> indices;
     std::vector<int> current_available_collapses;

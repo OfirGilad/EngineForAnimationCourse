@@ -90,7 +90,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     auto morph_function = [](Model* model, cg3d::Visitor* visitor)
     {
         int current_index = model->meshIndex;
-        return (model->GetMeshList())[0]->data.size() - 1;
+        return (model->GetMeshList())[0]->data.size() * 0 + current_index;
     };
     autoModel1 = AutoMorphingModel::Create(*object1, morph_function);
     root->AddChild(autoModel1);
@@ -130,7 +130,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     object2_rotation_z = 0.001;
 
 
-    // Simplification part
+    // Simplification Support
     OV.push_back(V[0]);
     OV.push_back(V[1]);
     OF.push_back(F[0]);
@@ -144,6 +144,15 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     autoModels.push_back(autoModel2);
 
     new_reset();
+    max_support = 5;
+    for (int i = 0; i < max_support; i++) {
+        new_simplification(0);
+        new_simplification(1);
+    }
+    for (int i = 0; i < max_support; i++) {
+        level_up(0);
+        level_up(1);
+    }
 }
 
 void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, const Eigen::Matrix4f& view, const Eigen::Matrix4f& model)
@@ -155,8 +164,7 @@ void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, con
 
     autoModel1->Translate({ object_velocity_x, object_velocity_y, 0 });
 
-    bool collision_check_result = CollisionCheck(&object1Tree, &object2Tree);
-    if (collision_check_result) {
+    if (print_collision_status && CollisionCheck(&object1Tree, &object2Tree, 0)) {
         autoModel1->Rotate(0.0, Axis::Z);
         autoModel2->Rotate(0.0, Axis::Z);
         
@@ -166,14 +174,22 @@ void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, con
         object1_rotation_z = 0.0;
         object2_rotation_z = 0.0;
 
-        if (print_collision_status) {
-            print_collision_status = false;
-            std::cout << "Collision Detected!" << std::endl;
-        } 
+        print_collision_status = false;
+        std::cout << "Collision Detected!" << std::endl;
+
+
+        // Simplification Support
+        level_reset(0);
+        level_reset(1);
     }
     else {
         autoModel1->Rotate(object1_rotation_z, Axis::Z);
         autoModel2->Rotate(object2_rotation_z, Axis::Z);
+
+
+        // Simplification Support
+        level_reset(0);
+        level_reset(1);
     }
     
 }
@@ -259,7 +275,7 @@ void BasicScene::DrawObjectBox(Eigen::AlignedBox<double, 3>& aligned_box, Eigen:
     data().add_edges(TopLeftFloor, BottomLeftFloor, color_vector);
 }
 
-bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl::AABB<Eigen::MatrixXd, 3>* object_tree2)
+bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl::AABB<Eigen::MatrixXd, 3>* object_tree2, int level)
 {
     //base cases
     if (object_tree1 == nullptr || object_tree2 == nullptr)
@@ -267,6 +283,11 @@ bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl
     if (!BoxesIntersectionCheck(object_tree1->m_box, object_tree2->m_box)) {
         return false;
     }
+    if ((level > autoModels[0]->meshIndex) && (level <= max_support)) {
+        level_down(0);
+        level_down(1);
+    }
+
     if (object_tree1->is_leaf() && object_tree2->is_leaf()) {
         Eigen::RowVector3d color_vector = Eigen::RowVector3d(255, 0, 0);
         // If the boxes intersect than draw the boxes
@@ -277,18 +298,18 @@ bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl
     }
     if (object_tree1->is_leaf() && !object_tree2->is_leaf()) {
 
-        return CollisionCheck(object_tree1, object_tree2->m_right) ||
-            CollisionCheck(object_tree1, object_tree2->m_left);
+        return CollisionCheck(object_tree1, object_tree2->m_right, level + 1) ||
+            CollisionCheck(object_tree1, object_tree2->m_left, level + 1);
     }
     if (!object_tree1->is_leaf() && object_tree2->is_leaf()) {
-        return CollisionCheck(object_tree1->m_right, object_tree2) ||
-            CollisionCheck(object_tree1->m_left, object_tree2);
+        return CollisionCheck(object_tree1->m_right, object_tree2, level + 1) ||
+            CollisionCheck(object_tree1->m_left, object_tree2, level + 1);
     }
 
-    return CollisionCheck(object_tree1->m_left, object_tree2->m_left) ||
-        CollisionCheck(object_tree1->m_left, object_tree2->m_right) ||
-        CollisionCheck(object_tree1->m_right, object_tree2->m_left) ||
-        CollisionCheck(object_tree1->m_right, object_tree2->m_right);
+    return CollisionCheck(object_tree1->m_left, object_tree2->m_left, level + 1) ||
+        CollisionCheck(object_tree1->m_left, object_tree2->m_right, level + 1) ||
+        CollisionCheck(object_tree1->m_right, object_tree2->m_left, level + 1) ||
+        CollisionCheck(object_tree1->m_right, object_tree2->m_right, level + 1);
 }
 
 bool BasicScene::BoxesIntersectionCheck(Eigen::AlignedBox<double, 3>& aligned_box1, Eigen::AlignedBox<double, 3>& aligned_box2)
@@ -427,6 +448,32 @@ bool BasicScene::BoxesIntersectionCheck(Eigen::AlignedBox<double, 3>& aligned_bo
 
     // All the conditions are met
     return true;
+}
+
+void BasicScene::level_up(int object_index)
+{
+    indices[object_index]--;
+    if (indices[object_index] < 0)
+    {
+        indices[object_index] = max(0, current_available_collapses[object_index] - 1);
+    }
+    autoModels[object_index]->meshIndex = indices[object_index];
+}
+
+void BasicScene::level_down(int object_index)
+{
+    indices[object_index]++;
+    if (indices[object_index] >= current_available_collapses[object_index])
+    {
+        indices[object_index] = 0;
+    }
+    autoModels[object_index]->meshIndex = indices[object_index];
+}
+
+void BasicScene::level_reset(int object_index)
+{
+    indices[object_index] = 0;
+    autoModels[object_index]->meshIndex = indices[object_index];
 }
 
 void BasicScene::set_mesh_data(int object_index)
