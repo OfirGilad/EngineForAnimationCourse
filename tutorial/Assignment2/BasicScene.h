@@ -13,8 +13,9 @@ public:
     void Update(const cg3d::Program& program, const Eigen::Matrix4f& proj, const Eigen::Matrix4f& view, const Eigen::Matrix4f& model) override;
     void KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, int scancode, int action, int mods) override;
 
-    void DrawObjectBox(Eigen::AlignedBox<double, 3>& aligned_box);
+    void DrawObjectBox(Eigen::AlignedBox<double, 3>& aligned_box, Eigen::RowVector3d color_vector);
     bool CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* aligned_box1, igl::AABB<Eigen::MatrixXd, 3>* aligned_box2);
+    bool BoxesIntersectionCheck(Eigen::AlignedBox<double, 3>& aligned_box1, Eigen::AlignedBox<double, 3>& aligned_box2);
 
 private:
     std::shared_ptr<Movable> root;
@@ -24,4 +25,6 @@ private:
     std::shared_ptr<cg3d::Model> autoModel1, autoModel2;
     igl::AABB<Eigen::MatrixXd, 3> object1Tree, object2Tree;
     float object_velocity_x, object_velocity_y;
+    float object1_rotation_z, object2_rotation_z;
+    bool print_collision_status;
 };
