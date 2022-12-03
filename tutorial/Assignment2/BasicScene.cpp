@@ -7,10 +7,15 @@
 #include "igl/edge_flaps.h"
 #include "igl/AABB.h"
 #include "igl/per_vertex_normals.h"
+#include "igl/vertex_triangle_adjacency.h"
+#include "igl/per_face_normals.h"
+#include "igl/circulation.h"
+#include "igl/collapse_edge.h"
 
 #include "AutoMorphingModel.h"
 
 using namespace cg3d;
+using namespace std;
 
 void BasicScene::Init(float fov, int width, int height, float near, float far)
 {
@@ -32,15 +37,14 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
  
     material->AddTexture(0, "textures/box0.bmp", 2);
     auto sphereMesh{IglLoader::MeshFromFiles("sphere_igl", "data/sphere.obj")};
-    auto cylMesh{IglLoader::MeshFromFiles("cyl_igl","data/camel_b.obj")};
+    auto bunnylMesh{IglLoader::MeshFromFiles("cyl_igl","data/bunny.off")};
     auto cubeMesh{IglLoader::MeshFromFiles("cube_igl","data/cube.off")};
 
-    /*sphere1 = Model::Create( "sphere",sphereMesh, material);
-    cyl = Model::Create( "cyl", cylMesh, material);
-    cube = Model::Create( "cube", cubeMesh, material);*/
+    //sphere1 = Model::Create( "sphere",sphereMesh, material);
+    //cyl = Model::Create( "cyl", cylMesh, material);
+    //cube = Model::Create( "cube", cubeMesh, material);
 
     
-
     //sphere1->Scale(2);
     //sphere1->showWireframe = true;
     //sphere1->Translate({-3,0,0});
@@ -48,7 +52,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     //cyl->Scale(0.12f);
     //cyl->showWireframe = true;
     //cube->showWireframe = true;
-    camera->Translate(10, Axis::Z);
+    //camera->Translate(10, Axis::Z);
     //root->AddChild(sphere1);
     //root->AddChild(cyl);
     //root->AddChild(cube);
@@ -75,6 +79,8 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     //std::cout<< "edges indices: \n" << EI.transpose() <<std::endl;
 
     // Start of new code
+    camera->Translate(10, Axis::Z);
+
     object1 = Model::Create("sphere", sphereMesh, material);
     object2 = Model::Create("sphere", sphereMesh, material);
 
@@ -94,18 +100,15 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     root->AddChild(autoModel2);
     autoModel2->Translate({ 1.5, 0, 0 });
 
-    Eigen::MatrixXi F1, F2;
-    Eigen::MatrixXd V1, V2;
-
     auto mesh = autoModel1->GetMeshList();
-    V1 = mesh[0]->data[0].vertices;
-    F1 = mesh[0]->data[0].faces;
-    object1Tree.init(V1, F1);
+    V.push_back(mesh[0]->data[0].vertices);
+    F.push_back(mesh[0]->data[0].faces);
+    object1Tree.init(V[0], F[0]);
 
     mesh = autoModel2->GetMeshList();
-    V2 = mesh[0]->data[0].vertices;
-    F2 = mesh[0]->data[0].faces;
-    object2Tree.init(V2, F2);
+    V.push_back(mesh[0]->data[0].vertices);
+    F.push_back(mesh[0]->data[0].faces);
+    object2Tree.init(V[1], F[1]);
 
 
     /*data().set_mesh(V1, F1);
@@ -125,6 +128,22 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
 
     object1_rotation_z = -0.001;
     object2_rotation_z = 0.001;
+
+
+    // Simplification part
+    OV.push_back(V[0]);
+    OV.push_back(V[1]);
+    OF.push_back(F[0]);
+    OF.push_back(F[1]);
+
+    indices.push_back(0);
+    indices.push_back(0);
+    current_available_collapses.push_back(1);
+    current_available_collapses.push_back(1);
+    autoModels.push_back(autoModel1);
+    autoModels.push_back(autoModel2);
+
+    new_reset();
 }
 
 void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, const Eigen::Matrix4f& view, const Eigen::Matrix4f& model)
@@ -133,8 +152,6 @@ void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, con
     program.SetUniform4f("lightColor", 1.0f, 1.0f, 1.0f, 0.5f);
     program.SetUniform4f("Kai", 1.0f, 1.0f, 1.0f, 1.0f);
     //cube->Rotate(0.01f, Axis::All);
-
-    
 
     autoModel1->Translate({ object_velocity_x, object_velocity_y, 0 });
 
@@ -206,11 +223,19 @@ void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, i
             object1_rotation_z = 0.001;
             object2_rotation_z = 0.001;
             break;
+        case GLFW_KEY_R:
+            new_reset();
+            break;
+        case GLFW_KEY_A:
+            new_simplification(0);
+            new_simplification(1);
+            break;
         }
     }
 }
 
-void BasicScene::DrawObjectBox(Eigen::AlignedBox<double, 3>& aligned_box, Eigen::RowVector3d color_vector) {
+void BasicScene::DrawObjectBox(Eigen::AlignedBox<double, 3>& aligned_box, Eigen::RowVector3d color_vector)
+{
     Eigen::RowVector3d BottomRightCeil = aligned_box.corner(aligned_box.BottomRightCeil);
     Eigen::RowVector3d BottomRightFloor = aligned_box.corner(aligned_box.BottomRightFloor);
     Eigen::RowVector3d BottomLeftCeil = aligned_box.corner(aligned_box.BottomLeftCeil);
@@ -234,7 +259,8 @@ void BasicScene::DrawObjectBox(Eigen::AlignedBox<double, 3>& aligned_box, Eigen:
     data().add_edges(TopLeftFloor, BottomLeftFloor, color_vector);
 }
 
-bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl::AABB<Eigen::MatrixXd, 3>* object_tree2) {
+bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl::AABB<Eigen::MatrixXd, 3>* object_tree2)
+{
     //base cases
     if (object_tree1 == nullptr || object_tree2 == nullptr)
         return false;
@@ -243,7 +269,7 @@ bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl
     }
     if (object_tree1->is_leaf() && object_tree2->is_leaf()) {
         Eigen::RowVector3d color_vector = Eigen::RowVector3d(255, 0, 0);
-        //if the boxes intersect than draw the boxes
+        // If the boxes intersect than draw the boxes
         //DrawObjectBox(aligned_box1->m_box, color_vector);
         //DrawObjectBox(aligned_box2->m_box, color_vector);
         return true;
@@ -265,7 +291,8 @@ bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl
         CollisionCheck(object_tree1->m_right, object_tree2->m_right);
 }
 
-bool BasicScene::BoxesIntersectionCheck(Eigen::AlignedBox<double, 3>& aligned_box1, Eigen::AlignedBox<double, 3>& aligned_box2) {
+bool BasicScene::BoxesIntersectionCheck(Eigen::AlignedBox<double, 3>& aligned_box1, Eigen::AlignedBox<double, 3>& aligned_box2)
+{
     // Matrix A
     Eigen::Matrix3d A = autoModel1->GetRotation().cast<double>();
     Eigen::Vector3d A0 = A.col(0);
@@ -289,8 +316,6 @@ bool BasicScene::BoxesIntersectionCheck(Eigen::AlignedBox<double, 3>& aligned_bo
     // Matrix D
     Eigen::Vector4d CenterA = Eigen::Vector4d(aligned_box1.center()[0], aligned_box1.center()[1], aligned_box1.center()[2], 1);
     Eigen::Vector4d CenterB = Eigen::Vector4d(aligned_box2.center()[0], aligned_box2.center()[1], aligned_box2.center()[2], 1);
-    //Eigen::Vector4d D4d = data_list[1].MakeTransd().cast<double>() * CenterB - data_list[0].MakeTransd().cast<double>() * CenterA;
-    //Eigen::Vector3d D = D4d.head(3);
     Eigen::Vector4d D4d = autoModel2->GetTransform().cast<double>() * CenterB - autoModel1->GetTransform().cast<double>() * CenterA;
     Eigen::Vector3d D = D4d.head(3);
 
@@ -402,4 +427,263 @@ bool BasicScene::BoxesIntersectionCheck(Eigen::AlignedBox<double, 3>& aligned_bo
 
     // All the conditions are met
     return true;
+}
+
+void BasicScene::set_mesh_data(int object_index)
+{
+    igl::per_vertex_normals(V[object_index], F[object_index], VN);
+    T = Eigen::MatrixXd::Zero(V[object_index].rows(), 2);
+    auto mesh = autoModels[object_index]->GetMeshList();
+    mesh[0]->data.push_back({ V[object_index], F[object_index], VN, T });
+    autoModels[object_index]->SetMeshList(mesh);
+    autoModels[object_index]->meshIndex = indices[object_index];
+}
+
+void BasicScene::new_reset()
+{
+    int size = 2;
+    E.resize(size);
+    EMAP.resize(size);
+    EF.resize(size);
+    new_Q.resize(size);
+    EI.resize(size);
+    C.resize(size);
+    Q_iter.resize(size);
+    Q_matrix.resize(size);
+    num_collapsed.resize(size);
+
+    for (int object_index = 0; object_index < size; object_index++) {
+        auto mesh = autoModels[object_index]->GetMeshList();
+        for (int i = 1; i < current_available_collapses[object_index]; i++)
+        {
+            mesh[0]->data.pop_back();
+        }
+        autoModels[object_index]->SetMeshList(mesh);
+        current_available_collapses[object_index] = 1;
+
+        V[object_index] = OV[object_index];
+        F[object_index] = OF[object_index];
+        init_data(object_index);
+        indices[object_index] = 0;
+        autoModels[object_index]->meshIndex = indices[object_index];
+    }
+}
+
+void BasicScene::init_data(int object_index)
+{
+    igl::edge_flaps(F[object_index], E[object_index], EMAP[object_index], EF[object_index], EI[object_index]); // Init data_structures
+    C[object_index].resize(E[object_index].rows(), V[object_index].cols());
+    Q_iter[object_index].resize(E[object_index].rows()); // Number of edges 
+    Q_matrix_calculation(object_index);
+    new_Q[object_index].clear();
+    num_collapsed[object_index] = 0;
+
+    // Caculate egdes cost
+    for (int i = 0; i < E[object_index].rows(); i++)
+    {
+        edges_cost_calculation(i, object_index);
+    }
+}
+
+void BasicScene::Q_matrix_calculation(int object_index)
+{
+    std::vector<std::vector<int>> VF;  // Vertex to faces
+    std::vector<std::vector<int>> VFi; // Not in use
+    int n = V[object_index].rows();
+    Q_matrix[object_index].resize(n);
+    igl::vertex_triangle_adjacency(n, F[object_index], VF, VFi);
+    igl::per_face_normals(V[object_index], F[object_index], FN);
+
+    for (int i = 0; i < n; i++)
+    {
+        // Initialize 
+        Q_matrix[object_index][i] = Eigen::Matrix4d::Zero();
+
+        // Caculate vertex Q matrix 
+        for (int j = 0; j < VF[i].size(); j++)
+        {
+            // Get face normal
+            Eigen::Vector3d normal = FN.row(VF[i][j]).normalized();
+
+            // The equation is: ax+by+cz+d=0
+            double a = normal[0];
+            double b = normal[1];
+            double c = normal[2];
+            double d = V[object_index].row(i) * normal;
+            d *= -1;
+
+            // Kp = pp^T (s.t. p in planes)
+            Eigen::Matrix4d Kp;
+            Kp.row(0) = Eigen::Vector4d(a * a, a * b, a * c, a * d);
+            Kp.row(1) = Eigen::Vector4d(a * b, b * b, b * c, b * d);
+            Kp.row(2) = Eigen::Vector4d(a * c, b * c, c * c, c * d);
+            Kp.row(3) = Eigen::Vector4d(a * d, b * d, c * d, d * d);
+            Q_matrix[object_index][i] += Kp;
+        }
+    }
+}
+
+void BasicScene::edges_cost_calculation(int edge, int object_index)
+{
+    // Vertexes of the edge
+    int v1 = E[object_index](edge, 0);
+    int v2 = E[object_index](edge, 1);
+    Eigen::Matrix4d Q_edge = Q_matrix[object_index][v1] + Q_matrix[object_index][v2];
+
+    // We will use this to find v' position
+    Eigen::Matrix4d Q_position = Q_edge;
+    Q_position.row(3) = Eigen::Vector4d(0, 0, 0, 1);
+    Eigen::Vector4d v_position;
+    double cost;
+    bool isInversable;
+    Q_position.computeInverseWithCheck(Q_position, isInversable);
+
+    if (isInversable)
+    {
+        v_position = Q_position * (Eigen::Vector4d(0, 0, 0, 1));
+        cost = v_position.transpose() * Q_edge * v_position;
+    }
+    else
+    {
+        // Find min error from v1, v2, (v1+v2)/2
+        Eigen::Vector4d v1_position;
+        v1_position << V[object_index].row(v1), 1;
+        double cost1 = v1_position.transpose() * Q_edge * v1_position;
+
+        Eigen::Vector4d v2_position;
+        v2_position << V[object_index].row(v2), 1;
+        double cost2 = v2_position.transpose() * Q_edge * v2_position;
+
+        Eigen::Vector4d v1v2_position;
+        v1v2_position << ((V[object_index].row(v1) + V[object_index].row(v2)) / 2), 1;
+        double cost3 = v1v2_position.transpose() * Q_edge * v1v2_position;
+
+        if (cost1 < cost2 && cost1 < cost3)
+        {
+            v_position = v1_position;
+            cost = cost1;
+        }
+        else if (cost2 < cost1 && cost2 < cost3)
+        {
+            v_position = v2_position;
+            cost = cost2;
+        }
+        else {
+            v_position = v1v2_position;
+            cost = cost3;
+        }
+    }
+    Eigen::Vector3d new_position;
+    new_position[0] = v_position[0];
+    new_position[1] = v_position[1];
+    new_position[2] = v_position[2];
+    C[object_index].row(edge) = new_position;
+    Q_iter[object_index][edge] = new_Q[object_index].insert(std::pair<double, int>(cost, edge)).first;
+}
+
+void BasicScene::new_simplification(int object_index)
+{
+    // If it isn't the last collapsed mesh, do nothing
+    if (indices[object_index] != current_available_collapses[object_index] - 1)
+    {
+        return;
+    }
+    bool something_collapsed = false;
+
+    // Collapse 10% of edges
+    const int max_iter = std::ceil(0.1 * new_Q[object_index].size());
+    for (int i = 0; i < max_iter; i++)
+    {
+        if (!new_collapse_edge(object_index))
+        {
+            break;
+        }
+        something_collapsed = true;
+        num_collapsed[object_index]++;
+    }
+    if (something_collapsed)
+    {
+        current_available_collapses[object_index]++;
+        indices[object_index]++;
+        set_mesh_data(object_index);
+    }
+}
+
+bool BasicScene::new_collapse_edge(int object_index)
+{
+    PriorityQueue& curr_Q = new_Q[object_index];
+    std::vector<PriorityQueue::iterator>& curr_Q_iter = Q_iter[object_index];
+    int e1, e2, f1, f2; // Will be used in the igl collapse_edge function
+    if (curr_Q.empty())
+    {
+        // No edges to collapse
+        return false;
+    }
+    std::pair<double, int> pair = *(curr_Q.begin());
+    if (pair.first == std::numeric_limits<double>::infinity())
+    {
+        // Min cost edge is infinite cost
+        return false;
+    }
+    curr_Q.erase(curr_Q.begin()); // Delete from the queue
+    int e = pair.second; // The lowest cost edge in the queue
+
+    // The 2 vertices of the edge
+    int v1 = E[object_index].row(e)[0];
+    int v2 = E[object_index].row(e)[1];
+    curr_Q_iter[e] = curr_Q.end();
+
+    // Get the list of faces around the end point the edge
+    std::vector<int> N = igl::circulation(e, true, EMAP[object_index], EF[object_index], EI[object_index]);
+    std::vector<int> Nd = igl::circulation(e, false, EMAP[object_index], EF[object_index], EI[object_index]);
+    N.insert(N.begin(), Nd.begin(), Nd.end());
+
+    // Collapse the edage
+    bool is_collapsed = igl::collapse_edge(e, C[object_index].row(e), V[object_index], F[object_index],  E[object_index], EMAP[object_index], EF[object_index], EI[object_index], e1, e2, f1, f2);
+    if (is_collapsed)
+    {
+        // Erase the two, other collapsed edges
+        curr_Q.erase(curr_Q_iter[e1]);
+        curr_Q_iter[e1] = curr_Q.end();
+        curr_Q.erase(curr_Q_iter[e2]);
+        curr_Q_iter[e2] = curr_Q.end();
+
+        // Update the Q matrix for the 2 veterixes we collapsed 
+        Q_matrix[object_index][v1] = Q_matrix[object_index][v1] + Q_matrix[object_index][v2];
+        Q_matrix[object_index][v2] = Q_matrix[object_index][v1] + Q_matrix[object_index][v2];
+        Eigen::VectorXd new_position;
+
+        // Update local neighbors
+        // Loop over original face neighbors
+        for (auto n : N)
+        {
+            if (F[object_index](n, 0) != IGL_COLLAPSE_EDGE_NULL ||
+                F[object_index](n, 1) != IGL_COLLAPSE_EDGE_NULL ||
+                F[object_index](n, 2) != IGL_COLLAPSE_EDGE_NULL)
+            {
+                for (int v = 0; v < 3; v++)
+                {
+                    // Get edge id
+                    const int ei = EMAP[object_index](v * F[object_index].rows() + n);
+                    // Erase old entry
+                    curr_Q.erase(curr_Q_iter[ei]);
+                    // Compute cost and potential placement and place in queue
+                    edges_cost_calculation(ei, object_index);
+                    new_position = C[object_index].row(ei);
+                }
+            }
+        }
+        //cout << "Edge: " << e
+        //    << ", Cost: " << pair.first
+        //    << ", New Position: (" << new_position[0] << "," << new_position[1] << "," << new_position[2] << ")"
+        //    << std::endl;
+    }
+    else
+    {
+        // Reinsert with infinite weight (the provided cost function must **not**
+        // have given this un-collapsable edge inf cost already)
+        pair.first = std::numeric_limits<double>::infinity();
+        curr_Q_iter[e] = curr_Q.insert(pair).first;
+    }
+    return is_collapsed;
 }

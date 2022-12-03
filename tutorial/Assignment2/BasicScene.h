@@ -19,7 +19,7 @@ public:
 
     // Simplification support
     void set_mesh_data(int object_index);
-    void new_reset(int object_index);
+    void new_reset();
     void init_data(int object_index);
     void Q_matrix_calculation(int object_index);
     void edges_cost_calculation(int edge, int object_index);
@@ -32,12 +32,18 @@ private:
     std::shared_ptr<cg3d::Model> object1, object2;
 
     std::shared_ptr<cg3d::Model> autoModel1, autoModel2;
+    std::vector<std::shared_ptr<cg3d::Model>> autoModels;
+
     igl::AABB<Eigen::MatrixXd, 3> object1Tree, object2Tree;
     float object_velocity_x, object_velocity_y;
     float object1_rotation_z, object2_rotation_z;
     bool print_collision_status;
 
     // Simplification support
+    std::vector<int> num_collapsed;
+    std::vector<int> indices;
+    std::vector<int> current_available_collapses;
+
     std::vector<Eigen::VectorXi> EMAP;
     std::vector<Eigen::MatrixXi> F, E, EF, EI;
     std::vector<Eigen::VectorXi> EQ;
@@ -45,7 +51,7 @@ private:
 
     std::vector<Eigen::MatrixXi> OF;
     std::vector<Eigen::MatrixXd> OV;
-    std::vector<Eigen::MatrixXd> VN, FN, T;
+    Eigen::MatrixXd VN, FN, T;
 
     typedef std::set<std::pair<double, int>> PriorityQueue;
     std::vector<PriorityQueue> new_Q; // priority queue - cost for every edge
