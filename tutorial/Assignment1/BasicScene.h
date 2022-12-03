@@ -75,5 +75,5 @@ private:
     typedef std::set<std::pair<double, int>> PriorityQueue;
     PriorityQueue new_Q; // priority queue - cost for every edge
     std::vector<PriorityQueue::iterator> Q_iter;
-    std::vector <Eigen::Matrix4d> Q_matrix; // list of Q matrix for each vertical
+    std::vector<Eigen::Matrix4d> Q_matrix; // list of Q matrix for each vertical
 };
