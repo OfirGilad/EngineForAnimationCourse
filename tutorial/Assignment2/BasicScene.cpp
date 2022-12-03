@@ -189,3 +189,171 @@ void BasicScene::DrawObjectBox(Eigen::AlignedBox<double, 3>& aligned_box) {
     data().add_edges(TopRightCeil, BottomRightCeil, color_vector);
     data().add_edges(TopLeftFloor, BottomLeftFloor, color_vector);
 }
+
+bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* aligned_box1, igl::AABB<Eigen::MatrixXd, 3>* aligned_box2) {
+    //base cases
+    if (aligned_box1 == nullptr || aligned_box2 == nullptr)
+        return false;
+    if (!BoxesIntersectionCheck(aligned_box1->m_box, aligned_box2->m_box)) {
+        return false;
+    }
+    if (aligned_box1->is_leaf() && aligned_box2->is_leaf()) {
+        //if the boxes intersect than draw the boxes
+        //DrawObjectBox(aligned_box1->m_box);
+        //DrawObjectBox(aligned_box2->m_box);
+        return true;
+
+    }
+    if (aligned_box1->is_leaf() && !aligned_box2->is_leaf()) {
+
+        return CollisionCheck(aligned_box1, aligned_box2->m_right) ||
+            CollisionCheck(aligned_box1, aligned_box2->m_left);
+    }
+    if (!aligned_box1->is_leaf() && aligned_box2->is_leaf()) {
+        return CollisionCheck(aligned_box1->m_right, aligned_box2) || 
+            CollisionCheck(aligned_box1->m_left, aligned_box2);
+    }
+
+    return CollisionCheck(aligned_box1->m_left, aligned_box2->m_left) ||
+        CollisionCheck(aligned_box1->m_left, aligned_box2->m_right) ||
+        CollisionCheck(aligned_box1->m_right, aligned_box2->m_left) ||
+        CollisionCheck(aligned_box1->m_right, aligned_box2->m_right);
+}
+
+bool BasicScene::BoxesIntersectionCheck(Eigen::AlignedBox<double, 3>& aligned_box1, Eigen::AlignedBox<double, 3>& aligned_box2) {
+    // Matrix A
+    Eigen::Matrix3d A = autoModel1->GetRotation().cast<double>();
+    Eigen::Vector3d A0 = A.col(0);
+    Eigen::Vector3d A1 = A.col(1);
+    Eigen::Vector3d A2 = A.col(2);
+
+    // Matrix B
+    Eigen::Matrix3d B = autoModel2->GetRotation().cast<double>();
+    Eigen::Vector3d B0 = B.col(0);
+    Eigen::Vector3d B1 = B.col(1);
+    Eigen::Vector3d B2 = B.col(2);
+
+    // C=A^T*B
+    Eigen::Matrix3d C = A.transpose() * B;
+    //get the lengths of the sides of the bounding box
+    Eigen::Vector3d a = aligned_box1.sizes();
+    Eigen::Vector3d b = aligned_box2.sizes();
+    a = a / 2;
+    b = b / 2;
+
+    // Build matrix D
+    Eigen::Vector4d CenterA = Eigen::Vector4d(aligned_box1.center()[0], aligned_box1.center()[1], aligned_box1.center()[2], 1);
+    Eigen::Vector4d CenterB = Eigen::Vector4d(aligned_box2.center()[0], aligned_box2.center()[1], aligned_box2.center()[2], 1);
+    //Eigen::Vector4d D4d = data_list[1].MakeTransd().cast<double>() * CenterB - data_list[0].MakeTransd().cast<double>() * CenterA;
+    //Eigen::Vector3d D = D4d.head(3);
+    Eigen::Vector3d D = Eigen::Vector4d(0, 0, 0, 0);
+
+    float R0, R1, R;
+
+    // Check the 15 conditions
+    // Check A conditions
+    // A0
+    R0 = a(0);
+    R1 = b(0) * abs(C.row(0)(0)) + b(1) * abs(C.row(0)(1)) + b(2) * abs(C.row(0)(2));
+    R = abs(A0.transpose() * D);
+    if (R0 + R1 < R) return false;
+    // A1
+    R0 = a(1);
+    R1 = b(0) * abs(C.row(1)(0)) + b(1) * abs(C.row(1)(1)) + b(2) * abs(C.row(1)(2));
+    R = abs(A1.transpose() * D);
+    if (R0 + R1 < R) return false;
+    // A2
+    R0 = a(2);
+    R1 = b(0) * abs(C.row(2)(0)) + b(1) * abs(C.row(2)(1)) + b(2) * abs(C.row(2)(2));
+    R = abs(A2.transpose() * D);
+    if (R0 + R1 < R) return false;
+    
+    // Check B conditions
+    // B0
+    R0 = a(0) * abs(C.row(0)(0)) + a(1) * abs(C.row(1)(0)) + a(2) * abs(C.row(2)(0));
+    R1 = b(0);
+    R = abs(B0.transpose() * D);
+    if (R0 + R1 < R) return false;
+    // B1
+    R0 = a(0) * abs(C.row(0)(1)) + a(1) * abs(C.row(1)(1)) + a(2) * abs(C.row(2)(1));
+    R1 = b(1);
+    R = abs(B1.transpose() * D);
+    if (R0 + R1 < R) return false;
+    // B2
+    R0 = a(0) * abs(C.row(0)(2)) + a(1) * abs(C.row(1)(2)) + a(2) * abs(C.row(2)(2));
+    R1 = b(2);
+    R = abs(B2.transpose() * D);
+    if (R0 + R1 < R) return false;
+
+    // Check A0 conditions
+    // A0 X B0
+    R0 = a(1) * abs(C.row(2)(0)) + a(2) * abs(C.row(1)(0));
+    R1 = b(1) * abs(C.row(0)(2)) + b(2) * abs(C.row(0)(1));
+    R = C.row(1)(0) * A2.transpose() * D;
+    R -= C.row(2)(0) * A1.transpose() * D;
+    R = abs(R);
+    if (R0 + R1 < R) return false;
+    // A0 X B1
+    R0 = a(1) * abs(C.row(2)(1)) + a(2) * abs(C.row(1)(1));
+    R1 = b(0) * abs(C.row(0)(2)) + b(2) * abs(C.row(0)(0));
+    R = C.row(1)(1) * A2.transpose() * D;
+    R -= C.row(2)(1) * A1.transpose() * D;
+    R = abs(R);
+    if (R0 + R1 < R) return false;
+    // A0 X B2
+    R0 = a(1) * abs(C.row(2)(2)) + a(2) * abs(C.row(1)(2));
+    R1 = b(0) * abs(C.row(0)(1)) + b(1) * abs(C.row(0)(0));
+    R = C.row(1)(2) * A2.transpose() * D;
+    R -= C.row(2)(2) * A1.transpose() * D;
+    R = abs(R);
+    if (R0 + R1 < R) return false;
+    
+    // Check A1 conditions
+    // A1 X B0
+    R0 = a(0) * abs(C.row(2)(0)) + a(2) * abs(C.row(0)(0));
+    R1 = b(1) * abs(C.row(1)(2)) + b(2) * abs(C.row(1)(1));
+    R = C.row(2)(0) * A0.transpose() * D;
+    R -= C.row(0)(0) * A2.transpose() * D;
+    R = abs(R);
+    if (R0 + R1 < R) return false;
+    // A1 X B1
+    R0 = a(0) * abs(C.row(2)(1)) + a(2) * abs(C.row(0)(1));
+    R1 = b(0) * abs(C.row(1)(2)) + b(2) * abs(C.row(1)(0));
+    R = C.row(2)(1) * A0.transpose() * D;
+    R -= C.row(0)(1) * A2.transpose() * D;
+    R = abs(R);
+    if (R0 + R1 < R) return false;
+    // A1 X B2
+    R0 = a(0) * abs(C.row(2)(2)) + a(2) * abs(C.row(0)(2));
+    R1 = b(0) * abs(C.row(1)(1)) + b(1) * abs(C.row(1)(0));
+    R = C.row(2)(2) * A0.transpose() * D;
+    R -= C.row(0)(2) * A2.transpose() * D;
+    R = abs(R);
+    if (R0 + R1 < R) return false;
+
+    // Check A2 conditions
+    // A2 X B0
+    R0 = a(0) * abs(C.row(1)(0)) + a(1) * abs(C.row(0)(0));
+    R1 = b(1) * abs(C.row(2)(2)) + b(2) * abs(C.row(2)(1));
+    R = C.row(0)(0) * A1.transpose() * D;
+    R -= C.row(1)(0) * A0.transpose() * D;
+    R = abs(R);
+    if (R0 + R1 < R) return false;
+    // A2 X B1
+    R0 = a(0) * abs(C.row(1)(1)) + a(1) * abs(C.row(0)(1));
+    R1 = b(0) * abs(C.row(2)(2)) + b(2) * abs(C.row(2)(0));
+    R = C.row(0)(1) * A1.transpose() * D;
+    R -= C.row(1)(1) * A0.transpose() * D;
+    R = abs(R);
+    if (R0 + R1 < R) return false;
+    // A2 X B2
+    R0 = a(0) * abs(C.row(1)(2)) + a(1) * abs(C.row(0)(2));
+    R1 = b(0) * abs(C.row(2)(1)) + b(1) * abs(C.row(2)(0));
+    R = C.row(0)(2) * A1.transpose() * D;
+    R -= C.row(1)(2) * A0.transpose() * D;
+    R = abs(R);
+    if (R0 + R1 < R) return false;
+
+    // All the conditions are met
+    return true;
+}

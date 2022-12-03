@@ -14,6 +14,7 @@ public:
     void KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, int scancode, int action, int mods) override;
 
     void DrawObjectBox(Eigen::AlignedBox<double, 3>& aligned_box);
+    bool CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* aligned_box1, igl::AABB<Eigen::MatrixXd, 3>* aligned_box2);
 
 private:
     std::shared_ptr<Movable> root;
