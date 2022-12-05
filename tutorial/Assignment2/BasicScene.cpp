@@ -33,8 +33,9 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
  
     auto program = std::make_shared<Program>("shaders/basicShader");
     auto material{ std::make_shared<Material>("material", program)}; // empty material
-   // SetNamedObject(cube, Model::Create, Mesh::Cube(), material, shared_from_this());
- 
+    // SetNamedObject(cube, Model::Create, Mesh::Cube(), material, shared_from_this());
+    auto empty_material{ std::make_shared<Material>("material", program) };
+
     material->AddTexture(0, "textures/box0.bmp", 2);
     auto sphereMesh{IglLoader::MeshFromFiles("sphere_igl", "data/sphere.obj")};
     auto bunnylMesh{IglLoader::MeshFromFiles("cyl_igl","data/bunny.off")};
@@ -83,20 +84,36 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
 
     object1 = Model::Create("sphere", sphereMesh, material);
     object2 = Model::Create("sphere", sphereMesh, material);
-
     object1->showWireframe = true;
     object2->showWireframe = true;
 
+    object1_cube = Model::Create("cube", cubeMesh, empty_material);
+    object2_cube = Model::Create("cube", cubeMesh, empty_material);
+    object1_cube->showFaces = false;
+    object2_cube->showFaces = false;
+    object1_cube->showWireframe = true;
+    object2_cube->showWireframe = true;
+
+    object1_hit_cube = Model::Create("cube", cubeMesh, empty_material);
+    object2_hit_cube = Model::Create("cube", cubeMesh, empty_material);
+    object1_hit_cube->showFaces = false;
+    object2_hit_cube->showFaces = false;
+    object1_hit_cube->showWireframe = true;
+    object2_hit_cube->showWireframe = true;
+    
     auto morph_function = [](Model* model, cg3d::Visitor* visitor)
     {
         int current_index = model->meshIndex;
         return (model->GetMeshList())[0]->data.size() * 0 + current_index;
     };
     autoModel1 = AutoMorphingModel::Create(*object1, morph_function);
+    autoModel1->AddChild(object1_cube);
+
     root->AddChild(autoModel1);
     autoModel1->Translate({ -1.5, 0, 0 });
 
     autoModel2 = AutoMorphingModel::Create(*object2, morph_function);
+    autoModel2->AddChild(object2_cube);
     root->AddChild(autoModel2);
     autoModel2->Translate({ 1.5, 0, 0 });
 
@@ -110,17 +127,8 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     F.push_back(mesh[0]->data[0].faces);
     object2Tree.init(V[1], F[1]);
 
-
-    /*data().set_mesh(V1, F1);
-    DrawObjectBox(object1Tree.m_box);
-    V1 = data().V;
-    F1 = data().F;
-    Eigen::MatrixXd VN, T;
-    igl::per_vertex_normals(V1, F1, VN);
-    T = Eigen::MatrixXd::Zero(V1.rows(), 2);
-    mesh = autoModel1->GetMeshList();
-    mesh[0]->data.push_back({ V1, F1, VN, T });
-    autoModel1->SetMeshList(mesh);*/
+    AlignedBoxTransformer(object1Tree.m_box, object1_cube);
+    AlignedBoxTransformer(object2Tree.m_box, object2_cube);
 
     print_collision_status = true;
     object_velocity_x = 0.001;
@@ -250,7 +258,7 @@ void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, i
     }
 }
 
-void BasicScene::DrawObjectBox(Eigen::AlignedBox<double, 3>& aligned_box, Eigen::RowVector3d color_vector)
+void BasicScene::AlignedBoxTransformer(Eigen::AlignedBox<double, 3>& aligned_box, std::shared_ptr<cg3d::Model> cube_model)
 {
     Eigen::RowVector3d BottomRightCeil = aligned_box.corner(aligned_box.BottomRightCeil);
     Eigen::RowVector3d BottomRightFloor = aligned_box.corner(aligned_box.BottomRightFloor);
@@ -261,18 +269,40 @@ void BasicScene::DrawObjectBox(Eigen::AlignedBox<double, 3>& aligned_box, Eigen:
     Eigen::RowVector3d TopLeftCeil = aligned_box.corner(aligned_box.TopLeftCeil);
     Eigen::RowVector3d TopLeftFloor = aligned_box.corner(aligned_box.TopLeftFloor);
 
-    data().add_edges(BottomLeftCeil, BottomRightCeil, color_vector);
-    data().add_edges(BottomLeftCeil, BottomLeftFloor, color_vector);
-    data().add_edges(BottomRightCeil, BottomRightFloor, color_vector);
-    data().add_edges(BottomLeftFloor, BottomRightFloor, color_vector);
-    data().add_edges(TopLeftCeil, TopRightCeil, color_vector);
-    data().add_edges(TopRightCeil, TopRightFloor, color_vector);
-    data().add_edges(TopLeftCeil, TopLeftFloor, color_vector);
-    data().add_edges(TopLeftFloor, TopRightFloor, color_vector);
-    data().add_edges(TopLeftCeil, BottomLeftCeil, color_vector);
-    data().add_edges(TopRightFloor, BottomRightFloor, color_vector);
-    data().add_edges(TopRightCeil, BottomRightCeil, color_vector);
-    data().add_edges(TopLeftFloor, BottomLeftFloor, color_vector);
+    //
+    Eigen::MatrixXd V, VN, T;
+    Eigen::MatrixXi F;
+
+    V.resize(8, 3);
+    F.resize(12, 3);
+    V.row(0) = BottomLeftFloor;
+    V.row(1) = BottomRightFloor;
+    V.row(2) = TopLeftFloor;
+    V.row(3) = TopRightFloor;
+    V.row(4) = BottomLeftCeil;
+    V.row(5) = BottomRightCeil;
+    V.row(6) = TopLeftCeil;
+    V.row(7) = TopRightCeil;
+    F.row(0) = Eigen::Vector3i(0, 1, 3);
+    F.row(1) = Eigen::Vector3i(3, 2, 0);
+    F.row(2) = Eigen::Vector3i(4, 5, 7);
+    F.row(3) = Eigen::Vector3i(7, 6, 4);
+    F.row(4) = Eigen::Vector3i(0, 4, 6);
+    F.row(5) = Eigen::Vector3i(6, 2, 0);
+    F.row(6) = Eigen::Vector3i(5, 7, 3);
+    F.row(7) = Eigen::Vector3i(7, 3, 1);
+    F.row(8) = Eigen::Vector3i(2, 6, 7);
+    F.row(9) = Eigen::Vector3i(7, 3, 2);
+    F.row(10) = Eigen::Vector3i(4, 5, 1);
+    F.row(11) = Eigen::Vector3i(1, 0, 4);
+
+    igl::per_vertex_normals(V, F, VN);
+    T = Eigen::MatrixXd::Zero(V.rows(), 2);
+
+    auto mesh = cube_model->GetMeshList();
+    mesh[0]->data.push_back({ V, F, VN, T });
+    cube_model->SetMeshList(mesh);
+    cube_model->meshIndex = 1;
 }
 
 bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl::AABB<Eigen::MatrixXd, 3>* object_tree2, int level)
@@ -289,10 +319,11 @@ bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl
     }
 
     if (object_tree1->is_leaf() && object_tree2->is_leaf()) {
-        Eigen::RowVector3d color_vector = Eigen::RowVector3d(255, 0, 0);
         // If the boxes intersect than draw the boxes
-        //DrawObjectBox(aligned_box1->m_box, color_vector);
-        //DrawObjectBox(aligned_box2->m_box, color_vector);
+        //autoModel1->AddChild(object1_hit_cube);
+        //autoModel2->AddChild(object2_hit_cube);
+        //AlignedBoxTransformer(object_tree1->m_box, object1_hit_cube);
+        //AlignedBoxTransformer(object_tree2->m_box, object2_hit_cube);
         return true;
 
     }
