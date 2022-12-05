@@ -340,7 +340,7 @@ bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl
         //AlignedBoxTransformer(object_tree2->m_box, object2_hit_cube);
         //object1_hit_cube->SetCenter(Eigen::Vector3f(object_tree1->m_box.center()[0], object_tree1->m_box.center()[1], object_tree1->m_box.center()[2]));
         //object2_hit_cube->SetCenter(Eigen::Vector3f(object_tree2->m_box.center()[0], object_tree2->m_box.center()[1], object_tree2->m_box.center()[2]));
-        //return true;
+        return true;
     }
     if (object_tree1->is_leaf() && !object_tree2->is_leaf()) {
 
