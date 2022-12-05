@@ -82,8 +82,15 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     // Start of new code
     camera->Translate(10, Axis::Z);
 
-    object1 = Model::Create("sphere", sphereMesh, material);
-    object2 = Model::Create("sphere", sphereMesh, material);
+    // Spheres
+    //object1 = Model::Create("sphere", sphereMesh, material);
+    //object2 = Model::Create("sphere", sphereMesh, material);
+    //object1->showWireframe = true;
+    //object2->showWireframe = true;
+
+    // Bunnies
+    object1 = Model::Create("bunny", bunnylMesh, material);
+    object2 = Model::Create("bunny", bunnylMesh, material);
     object1->showWireframe = true;
     object2->showWireframe = true;
 
@@ -108,14 +115,19 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     };
     autoModel1 = AutoMorphingModel::Create(*object1, morph_function);
     autoModel1->AddChild(object1_cube);
-
     root->AddChild(autoModel1);
-    autoModel1->Translate({ -1.5, 0, 0 });
-
+    
     autoModel2 = AutoMorphingModel::Create(*object2, morph_function);
     autoModel2->AddChild(object2_cube);
     root->AddChild(autoModel2);
-    autoModel2->Translate({ 1.5, 0, 0 });
+
+    // Spheres
+    //autoModel1->Translate({ -1.5, 0, 0 });
+    //autoModel2->Translate({ 1.5, 0, 0 });
+
+    // Bunnies
+    autoModel1->Translate({ -0.3, 0, 8 });
+    autoModel2->Translate({ 0.3, 0, 8 });
 
     auto mesh = autoModel1->GetMeshList();
     V.push_back(mesh[0]->data[0].vertices);
@@ -139,28 +151,26 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
 
 
     // Simplification Support
-    OV.push_back(V[0]);
-    OV.push_back(V[1]);
-    OF.push_back(F[0]);
-    OF.push_back(F[1]);
-
-    indices.push_back(0);
-    indices.push_back(0);
-    current_available_collapses.push_back(1);
-    current_available_collapses.push_back(1);
-    autoModels.push_back(autoModel1);
-    autoModels.push_back(autoModel2);
-
-    new_reset();
-    max_support = 5;
-    for (int i = 0; i < max_support; i++) {
-        new_simplification(0);
-        new_simplification(1);
-    }
-    for (int i = 0; i < max_support; i++) {
-        level_up(0);
-        level_up(1);
-    }
+    //OV.push_back(V[0]);
+    //OV.push_back(V[1]);
+    //OF.push_back(F[0]);
+    //OF.push_back(F[1]);
+    //indices.push_back(0);
+    //indices.push_back(0);
+    //current_available_collapses.push_back(1);
+    //current_available_collapses.push_back(1);
+    //autoModels.push_back(autoModel1);
+    //autoModels.push_back(autoModel2);
+    //new_reset();
+    //max_support = 5;
+    //for (int i = 0; i < max_support; i++) {
+    //    new_simplification(0);
+    //    new_simplification(1);
+    //}
+    //for (int i = 0; i < max_support; i++) {
+    //    level_up(0);
+    //    level_up(1);
+    //}
 }
 
 void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, const Eigen::Matrix4f& view, const Eigen::Matrix4f& model)
@@ -187,8 +197,8 @@ void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, con
 
 
         // Simplification Support
-        level_reset(0);
-        level_reset(1);
+        //level_reset(0);
+        //level_reset(1);
     }
     else {
         autoModel1->Rotate(object1_rotation_z, Axis::Z);
@@ -196,8 +206,8 @@ void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, con
 
 
         // Simplification Support
-        level_reset(0);
-        level_reset(1);
+        //level_reset(0);
+        //level_reset(1);
     }
     
 }
@@ -307,25 +317,30 @@ void BasicScene::AlignedBoxTransformer(Eigen::AlignedBox<double, 3>& aligned_box
 
 bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl::AABB<Eigen::MatrixXd, 3>* object_tree2, int level)
 {
-    //base cases
+    // Base cases
     if (object_tree1 == nullptr || object_tree2 == nullptr)
         return false;
     if (!BoxesIntersectionCheck(object_tree1->m_box, object_tree2->m_box)) {
         return false;
     }
-    if ((level > autoModels[0]->meshIndex) && (level <= max_support)) {
-        level_down(0);
-        level_down(1);
-    }
+
+
+    // Simplification Support
+    //if ((level > autoModels[0]->meshIndex) && (level <= max_support)) {
+    //    level_down(0);
+    //    level_down(1);
+    //}
 
     if (object_tree1->is_leaf() && object_tree2->is_leaf()) {
         // If the boxes intersect than draw the boxes
         //autoModel1->AddChild(object1_hit_cube);
         //autoModel2->AddChild(object2_hit_cube);
+        //std::cout << level << endl;
         //AlignedBoxTransformer(object_tree1->m_box, object1_hit_cube);
         //AlignedBoxTransformer(object_tree2->m_box, object2_hit_cube);
-        return true;
-
+        //object1_hit_cube->SetCenter(Eigen::Vector3f(object_tree1->m_box.center()[0], object_tree1->m_box.center()[1], object_tree1->m_box.center()[2]));
+        //object2_hit_cube->SetCenter(Eigen::Vector3f(object_tree2->m_box.center()[0], object_tree2->m_box.center()[1], object_tree2->m_box.center()[2]));
+        //return true;
     }
     if (object_tree1->is_leaf() && !object_tree2->is_leaf()) {
 
