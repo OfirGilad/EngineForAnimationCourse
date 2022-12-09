@@ -90,16 +90,16 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     camera->Translate(10, Axis::Z);
 
     // Spheres
-    object1 = Model::Create("sphere1", sphereMesh1, material);
-    object2 = Model::Create("sphere2", sphereMesh2, material);
-    object1->showWireframe = true;
-    object2->showWireframe = true;
-
-    // Bunnies
-    //object1 = Model::Create("bunny1", bunnylMesh1, material);
-    //object2 = Model::Create("bunny2", bunnylMesh2, material);
+    //object1 = Model::Create("sphere1", sphereMesh1, material);
+    //object2 = Model::Create("sphere2", sphereMesh2, material);
     //object1->showWireframe = true;
     //object2->showWireframe = true;
+
+    // Bunnies
+    object1 = Model::Create("bunny1", bunnylMesh1, material);
+    object2 = Model::Create("bunny2", bunnylMesh2, material);
+    object1->showWireframe = true;
+    object2->showWireframe = true;
 
     object1_cube = Model::Create("cube1", cubeMesh1, empty_material);
     object2_cube = Model::Create("cube2", cubeMesh2, empty_material);
@@ -130,12 +130,12 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     autoModel2->AddChild(object2_cube);
 
     // Spheres
-    autoModel1->Translate({ -1.5, 0, 0 });
-    autoModel2->Translate({ 1.5, 0, 0 });
+    //autoModel1->Translate({ -1.5, 0, 0 });
+    //autoModel2->Translate({ 1.5, 0, 0 });
 
     // Bunnies
-    //autoModel1->Translate({ -0.3, 0, 8 });
-    //autoModel2->Translate({ 0.3, 0, 8 });
+    autoModel1->Translate({ -0.3, -0.1, 9 });
+    autoModel2->Translate({ 0.3, -0.1, 9 });
 
     auto mesh = autoModel1->GetMeshList();
     V.push_back(mesh[0]->data[0].vertices);
