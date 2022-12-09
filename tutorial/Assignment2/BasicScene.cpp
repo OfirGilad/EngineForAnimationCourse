@@ -37,9 +37,16 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     auto empty_material{ std::make_shared<Material>("material", program) };
 
     material->AddTexture(0, "textures/box0.bmp", 2);
-    auto sphereMesh{IglLoader::MeshFromFiles("sphere_igl", "data/sphere.obj")};
-    auto bunnylMesh{IglLoader::MeshFromFiles("cyl_igl","data/bunny.off")};
-    auto cubeMesh{IglLoader::MeshFromFiles("cube_igl","data/cube.off")};
+    auto sphereMesh1{IglLoader::MeshFromFiles("sphere_igl", "data/sphere.obj")};
+    auto sphereMesh2{IglLoader::MeshFromFiles("sphere_igl", "data/sphere.obj")};
+
+    auto bunnylMesh1{IglLoader::MeshFromFiles("cyl_igl","data/bunny.off")};
+    auto bunnylMesh2{IglLoader::MeshFromFiles("cyl_igl","data/bunny.off")};
+
+    auto cubeMesh1{IglLoader::MeshFromFiles("cube_igl","data/cube.off")};
+    auto cubeMesh2{IglLoader::MeshFromFiles("cube_igl","data/cube.off")};
+    auto cubeMesh3{IglLoader::MeshFromFiles("cube_igl","data/cube.off")};
+    auto cubeMesh4{IglLoader::MeshFromFiles("cube_igl","data/cube.off")};
 
     //sphere1 = Model::Create( "sphere",sphereMesh, material);
     //cyl = Model::Create( "cyl", cylMesh, material);
@@ -83,30 +90,30 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     camera->Translate(10, Axis::Z);
 
     // Spheres
-    //object1 = Model::Create("sphere", sphereMesh, material);
-    //object2 = Model::Create("sphere", sphereMesh, material);
-    //object1->showWireframe = true;
-    //object2->showWireframe = true;
-
-    // Bunnies
-    object1 = Model::Create("bunny", bunnylMesh, material);
-    object2 = Model::Create("bunny", bunnylMesh, material);
+    object1 = Model::Create("sphere1", sphereMesh1, material);
+    object2 = Model::Create("sphere2", sphereMesh2, material);
     object1->showWireframe = true;
     object2->showWireframe = true;
 
-    object1_cube = Model::Create("cube", cubeMesh, empty_material);
-    object2_cube = Model::Create("cube", cubeMesh, empty_material);
+    // Bunnies
+    //object1 = Model::Create("bunny1", bunnylMesh1, material);
+    //object2 = Model::Create("bunny2", bunnylMesh2, material);
+    //object1->showWireframe = true;
+    //object2->showWireframe = true;
+
+    object1_cube = Model::Create("cube1", cubeMesh1, empty_material);
+    object2_cube = Model::Create("cube2", cubeMesh2, empty_material);
     object1_cube->showFaces = false;
     object2_cube->showFaces = false;
     object1_cube->showWireframe = true;
     object2_cube->showWireframe = true;
 
-    object1_hit_cube = Model::Create("cube", cubeMesh, empty_material);
-    object2_hit_cube = Model::Create("cube", cubeMesh, empty_material);
+    object1_hit_cube = Model::Create("cube3", cubeMesh3, empty_material);
+    object2_hit_cube = Model::Create("cube4", cubeMesh4, empty_material);
     object1_hit_cube->showFaces = false;
     object2_hit_cube->showFaces = false;
-    object1_hit_cube->showWireframe = true;
-    object2_hit_cube->showWireframe = true;
+    object1_hit_cube->showWireframe = false;
+    object2_hit_cube->showWireframe = false;
     
     auto morph_function = [](Model* model, cg3d::Visitor* visitor)
     {
@@ -114,20 +121,21 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
         return (model->GetMeshList())[0]->data.size() * 0 + current_index;
     };
     autoModel1 = AutoMorphingModel::Create(*object1, morph_function);
-    autoModel1->AddChild(object1_cube);
-    root->AddChild(autoModel1);
-    
     autoModel2 = AutoMorphingModel::Create(*object2, morph_function);
-    autoModel2->AddChild(object2_cube);
+
+
+    root->AddChild(autoModel1);
     root->AddChild(autoModel2);
+    autoModel1->AddChild(object1_cube);
+    autoModel2->AddChild(object2_cube);
 
     // Spheres
-    //autoModel1->Translate({ -1.5, 0, 0 });
-    //autoModel2->Translate({ 1.5, 0, 0 });
+    autoModel1->Translate({ -1.5, 0, 0 });
+    autoModel2->Translate({ 1.5, 0, 0 });
 
     // Bunnies
-    autoModel1->Translate({ -0.3, 0, 8 });
-    autoModel2->Translate({ 0.3, 0, 8 });
+    //autoModel1->Translate({ -0.3, 0, 8 });
+    //autoModel2->Translate({ 0.3, 0, 8 });
 
     auto mesh = autoModel1->GetMeshList();
     V.push_back(mesh[0]->data[0].vertices);
@@ -141,6 +149,9 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
 
     AlignedBoxTransformer(object1Tree.m_box, object1_cube);
     AlignedBoxTransformer(object2Tree.m_box, object2_cube);
+    AlignedBoxTransformer(object1Tree.m_box, object1_hit_cube);
+    AlignedBoxTransformer(object2Tree.m_box, object2_hit_cube);
+
 
     print_collision_status = true;
     object_velocity_x = 0.001;
@@ -219,9 +230,6 @@ void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, i
         switch (key) // NOLINT(hicpp-multiway-paths-covered)
         {
         case GLFW_KEY_SPACE:
-            autoModel1->Rotate(0.0, Axis::Z);
-            autoModel2->Rotate(0.0, Axis::Z);
-
             object_velocity_x = 0.0;
             object_velocity_y = 0.0;
             break;
@@ -259,10 +267,6 @@ void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, i
             break;
         case GLFW_KEY_R:
             new_reset();
-            break;
-        case GLFW_KEY_A:
-            new_simplification(0);
-            new_simplification(1);
             break;
         }
     }
@@ -312,7 +316,7 @@ void BasicScene::AlignedBoxTransformer(Eigen::AlignedBox<double, 3>& aligned_box
     auto mesh = cube_model->GetMeshList();
     mesh[0]->data.push_back({ V, F, VN, T });
     cube_model->SetMeshList(mesh);
-    cube_model->meshIndex = 1;
+    cube_model->meshIndex += 1;
 }
 
 bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl::AABB<Eigen::MatrixXd, 3>* object_tree2, int level)
@@ -333,13 +337,14 @@ bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl
 
     if (object_tree1->is_leaf() && object_tree2->is_leaf()) {
         // If the boxes intersect than draw the boxes
-        //autoModel1->AddChild(object1_hit_cube);
-        //autoModel2->AddChild(object2_hit_cube);
-        //std::cout << level << endl;
-        //AlignedBoxTransformer(object_tree1->m_box, object1_hit_cube);
-        //AlignedBoxTransformer(object_tree2->m_box, object2_hit_cube);
-        //object1_hit_cube->SetCenter(Eigen::Vector3f(object_tree1->m_box.center()[0], object_tree1->m_box.center()[1], object_tree1->m_box.center()[2]));
-        //object2_hit_cube->SetCenter(Eigen::Vector3f(object_tree2->m_box.center()[0], object_tree2->m_box.center()[1], object_tree2->m_box.center()[2]));
+        AlignedBoxTransformer(object_tree1->m_box, object1_hit_cube);
+        AlignedBoxTransformer(object_tree2->m_box, object2_hit_cube);
+        object1_hit_cube->showFaces = true;
+        object2_hit_cube->showFaces = true;
+        object1_hit_cube->showWireframe = true;
+        object2_hit_cube->showWireframe = true;
+        autoModel1->AddChild(object1_hit_cube);
+        autoModel2->AddChild(object2_hit_cube);
         return true;
     }
     if (object_tree1->is_leaf() && !object_tree2->is_leaf()) {
