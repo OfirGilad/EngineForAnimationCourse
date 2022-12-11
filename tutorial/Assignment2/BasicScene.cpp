@@ -274,6 +274,7 @@ void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, i
 
 void BasicScene::AlignedBoxTransformer(Eigen::AlignedBox<double, 3>& aligned_box, std::shared_ptr<cg3d::Model> cube_model)
 {
+    // Get the aligned box coordinates
     Eigen::RowVector3d BottomRightCeil = aligned_box.corner(aligned_box.BottomRightCeil);
     Eigen::RowVector3d BottomRightFloor = aligned_box.corner(aligned_box.BottomRightFloor);
     Eigen::RowVector3d BottomLeftCeil = aligned_box.corner(aligned_box.BottomLeftCeil);
@@ -283,7 +284,7 @@ void BasicScene::AlignedBoxTransformer(Eigen::AlignedBox<double, 3>& aligned_box
     Eigen::RowVector3d TopLeftCeil = aligned_box.corner(aligned_box.TopLeftCeil);
     Eigen::RowVector3d TopLeftFloor = aligned_box.corner(aligned_box.TopLeftFloor);
 
-    //
+    // Update the cube with the aligned box coordinates
     Eigen::MatrixXd V, VN, T;
     Eigen::MatrixXi F;
 
