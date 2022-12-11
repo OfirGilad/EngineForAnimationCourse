@@ -37,12 +37,16 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     auto empty_material{ std::make_shared<Material>("material", program) };
 
     material->AddTexture(0, "textures/box0.bmp", 2);
+
+    // Sphere Meshes
     auto sphereMesh1{IglLoader::MeshFromFiles("sphere_igl", "data/sphere.obj")};
     auto sphereMesh2{IglLoader::MeshFromFiles("sphere_igl", "data/sphere.obj")};
 
+    // Bunny Meshes
     auto bunnylMesh1{IglLoader::MeshFromFiles("cyl_igl","data/bunny.off")};
     auto bunnylMesh2{IglLoader::MeshFromFiles("cyl_igl","data/bunny.off")};
 
+    // Cube Meshes
     auto cubeMesh1{IglLoader::MeshFromFiles("cube_igl","data/cube.off")};
     auto cubeMesh2{IglLoader::MeshFromFiles("cube_igl","data/cube.off")};
     auto cubeMesh3{IglLoader::MeshFromFiles("cube_igl","data/cube.off")};
@@ -101,6 +105,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     object1->showWireframe = true;
     object2->showWireframe = true;
 
+    // Biggest bounding boxes
     object1_cube = Model::Create("cube1", cubeMesh1, empty_material);
     object2_cube = Model::Create("cube2", cubeMesh2, empty_material);
     object1_cube->showFaces = false;
@@ -108,6 +113,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     object1_cube->showWireframe = true;
     object2_cube->showWireframe = true;
 
+    // Smallest bounding boxes
     object1_hit_cube = Model::Create("cube3", cubeMesh3, empty_material);
     object2_hit_cube = Model::Create("cube4", cubeMesh4, empty_material);
     object1_hit_cube->showFaces = false;
@@ -123,7 +129,6 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     autoModel1 = AutoMorphingModel::Create(*object1, morph_function);
     autoModel2 = AutoMorphingModel::Create(*object2, morph_function);
 
-
     root->AddChild(autoModel1);
     root->AddChild(autoModel2);
     autoModel1->AddChild(object1_cube);
@@ -137,26 +142,25 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     autoModel1->Translate({ -0.3, -0.1, 9 });
     autoModel2->Translate({ 0.3, -0.1, 9 });
 
+    // Initialize object1 tree
     auto mesh = autoModel1->GetMeshList();
     V.push_back(mesh[0]->data[0].vertices);
     F.push_back(mesh[0]->data[0].faces);
     object1Tree.init(V[0], F[0]);
 
+    // Initialize object2 tree
     mesh = autoModel2->GetMeshList();
     V.push_back(mesh[0]->data[0].vertices);
     F.push_back(mesh[0]->data[0].faces);
     object2Tree.init(V[1], F[1]);
 
+    // Creating each object's biggest bounding box 
     AlignedBoxTransformer(object1Tree.m_box, object1_cube);
     AlignedBoxTransformer(object2Tree.m_box, object2_cube);
-    AlignedBoxTransformer(object1Tree.m_box, object1_hit_cube);
-    AlignedBoxTransformer(object2Tree.m_box, object2_hit_cube);
-
 
     print_collision_status = true;
     object_velocity_x = 0.001;
     object_velocity_y = 0.0;
-
     object1_rotation_z = -0.001;
     object2_rotation_z = 0.001;
 
@@ -193,7 +197,9 @@ void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, con
 
     autoModel1->Translate({ object_velocity_x, object_velocity_y, 0 });
 
-    if (print_collision_status && CollisionCheck(&object1Tree, &object2Tree, 0)) {
+    // Check if a collision occurred
+    if (print_collision_status && CollisionCheck(&object1Tree, &object2Tree, 0)) 
+    {
         autoModel1->Rotate(0.0, Axis::Z);
         autoModel2->Rotate(0.0, Axis::Z);
         
@@ -211,7 +217,9 @@ void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, con
         //level_reset(0);
         //level_reset(1);
     }
-    else {
+    // No collision occurred
+    else 
+    {
         autoModel1->Rotate(object1_rotation_z, Axis::Z);
         autoModel2->Rotate(object2_rotation_z, Axis::Z);
 
@@ -237,7 +245,6 @@ void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, i
             print_collision_status = true;
             object_velocity_x = 0.0;
             object_velocity_y = 0.001;
-
             object1_rotation_z = 0.0;
             object2_rotation_z = 0.001;
             break;
@@ -245,7 +252,6 @@ void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, i
             print_collision_status = true;
             object_velocity_x = 0.0;
             object_velocity_y = -0.001;
-
             object1_rotation_z = 0.0;
             object2_rotation_z = 0.001;
             break;
@@ -253,7 +259,6 @@ void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, i
             print_collision_status = true;
             object_velocity_x = 0.001;
             object_velocity_y = 0.0;
-
             object1_rotation_z = -0.001;
             object2_rotation_z = 0.001;
             break;
@@ -261,7 +266,6 @@ void BasicScene::KeyCallback(cg3d::Viewport* _viewport, int x, int y, int key, i
             print_collision_status = true;
             object_velocity_x = -0.001;
             object_velocity_y = 0.0;
-
             object1_rotation_z = 0.001;
             object2_rotation_z = 0.001;
             break;
@@ -324,8 +328,11 @@ bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl
 {
     // Base cases
     if (object_tree1 == nullptr || object_tree2 == nullptr)
+    {
         return false;
-    if (!BoxesIntersectionCheck(object_tree1->m_box, object_tree2->m_box)) {
+    }
+    if (!BoxesIntersectionCheck(object_tree1->m_box, object_tree2->m_box)) 
+    {
         return false;
     }
 
@@ -336,8 +343,8 @@ bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl
     //    level_down(1);
     //}
 
+    // If the boxes intersect than creating each object's smallest bounding box
     if (object_tree1->is_leaf() && object_tree2->is_leaf()) {
-        // If the boxes intersect than draw the boxes
         AlignedBoxTransformer(object_tree1->m_box, object1_hit_cube);
         AlignedBoxTransformer(object_tree2->m_box, object2_hit_cube);
         object1_hit_cube->showFaces = true;
@@ -349,7 +356,6 @@ bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl
         return true;
     }
     if (object_tree1->is_leaf() && !object_tree2->is_leaf()) {
-
         return CollisionCheck(object_tree1, object_tree2->m_right, level + 1) ||
             CollisionCheck(object_tree1, object_tree2->m_left, level + 1);
     }
@@ -357,7 +363,6 @@ bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl
         return CollisionCheck(object_tree1->m_right, object_tree2, level + 1) ||
             CollisionCheck(object_tree1->m_left, object_tree2, level + 1);
     }
-
     return CollisionCheck(object_tree1->m_left, object_tree2->m_left, level + 1) ||
         CollisionCheck(object_tree1->m_left, object_tree2->m_right, level + 1) ||
         CollisionCheck(object_tree1->m_right, object_tree2->m_left, level + 1) ||
@@ -502,6 +507,8 @@ bool BasicScene::BoxesIntersectionCheck(Eigen::AlignedBox<double, 3>& aligned_bo
     return true;
 }
 
+
+// Simplification Support
 void BasicScene::level_up(int object_index)
 {
     indices[object_index]--;
