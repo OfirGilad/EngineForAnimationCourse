@@ -92,7 +92,7 @@ void Scene::CursorPosCallback(Viewport* viewport, int x, int y, bool dragging, i
         } else {
             camera->SetTout(cameraToutAtPress);
             if (buttonState[GLFW_MOUSE_BUTTON_LEFT] != GLFW_RELEASE)
-                camera->TranslateInSystem(system, {float(xAtPress - x) / moveCoeff / 100, float(y - yAtPress) / moveCoeff / 100, 0});
+                camera->TranslateInSystem(system, {float(xAtPress - x) / moveCoeff / 100.f, float(y - yAtPress) / moveCoeff / 100.f, 0});
             if (buttonState[GLFW_MOUSE_BUTTON_MIDDLE] != GLFW_RELEASE)
                 camera->RotateInSystem(system, float(x - xAtPress) / 180, Axis::Z);
             if (buttonState[GLFW_MOUSE_BUTTON_RIGHT] != GLFW_RELEASE) {
