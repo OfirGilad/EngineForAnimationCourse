@@ -32,11 +32,13 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
 
  
     auto program = std::make_shared<Program>("shaders/basicShader");
-    auto material{ std::make_shared<Material>("material", program)}; // empty material
+    auto material{ std::make_shared<Material>("material", program)};
     // SetNamedObject(cube, Model::Create, Mesh::Cube(), material, shared_from_this());
-    auto empty_material{ std::make_shared<Material>("material", program) };
+    auto empty_material{ std::make_shared<Material>("material", program) }; // empty material
+    auto hit_material{ std::make_shared<Material>("material", program) }; // hit material
 
     material->AddTexture(0, "textures/box0.bmp", 2);
+    hit_material->AddTexture(0, "textures/grass.bmp", 2);
 
     // Sphere Meshes
     auto sphereMesh1{IglLoader::MeshFromFiles("sphere_igl", "data/sphere.obj")};
@@ -108,18 +110,10 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     // Biggest bounding boxes
     object1_cube = Model::Create("cube1", cubeMesh1, empty_material);
     object2_cube = Model::Create("cube2", cubeMesh2, empty_material);
-    object1_cube->showFaces = false;
-    object2_cube->showFaces = false;
-    object1_cube->showWireframe = true;
-    object2_cube->showWireframe = true;
 
     // Smallest bounding boxes
-    object1_hit_cube = Model::Create("cube3", cubeMesh3, empty_material);
-    object2_hit_cube = Model::Create("cube4", cubeMesh4, empty_material);
-    object1_hit_cube->showFaces = false;
-    object2_hit_cube->showFaces = false;
-    object1_hit_cube->showWireframe = false;
-    object2_hit_cube->showWireframe = false;
+    object1_hit_cube = Model::Create("cube3", cubeMesh3, hit_material);
+    object2_hit_cube = Model::Create("cube4", cubeMesh4, hit_material);
     
     auto morph_function = [](Model* model, cg3d::Visitor* visitor)
     {
@@ -131,8 +125,13 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
 
     root->AddChild(autoModel1);
     root->AddChild(autoModel2);
+
     autoModel1->AddChild(object1_cube);
     autoModel2->AddChild(object2_cube);
+    object1_cube->showFaces = false;
+    object2_cube->showFaces = false;
+    object1_cube->showWireframe = true;
+    object2_cube->showWireframe = true;
 
     // Spheres
     //autoModel1->Translate({ -1.5, 0, 0 });
@@ -347,12 +346,12 @@ bool BasicScene::CollisionCheck(igl::AABB<Eigen::MatrixXd, 3>* object_tree1, igl
     if (object_tree1->is_leaf() && object_tree2->is_leaf()) {
         AlignedBoxTransformer(object_tree1->m_box, object1_hit_cube);
         AlignedBoxTransformer(object_tree2->m_box, object2_hit_cube);
-        object1_hit_cube->showFaces = true;
-        object2_hit_cube->showFaces = true;
-        object1_hit_cube->showWireframe = true;
-        object2_hit_cube->showWireframe = true;
         autoModel1->AddChild(object1_hit_cube);
         autoModel2->AddChild(object2_hit_cube);
+        object1_hit_cube->showFaces = false;
+        object2_hit_cube->showFaces = false;
+        object1_hit_cube->showWireframe = true;
+        object2_hit_cube->showWireframe = true;
         return true;
     }
     if (object_tree1->is_leaf() && !object_tree2->is_leaf()) {

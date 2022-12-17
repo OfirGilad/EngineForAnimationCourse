@@ -65,10 +65,10 @@ void Scene::ScrollCallback(Viewport* viewport, int x, int y, int xoffset, int yo
     // note: there's a (small) chance the button state here precedes the mouse press/release event
     auto system = camera->GetRotation().transpose();
     if (pickedModel) {
-        pickedModel->TranslateInSystem(system, {0, 0, -float(yoffset) * 0.25f});
+        pickedModel->TranslateInSystem(system, {0, 0, -float(yoffset) * 0.1f});
         pickedToutAtPress = pickedModel->GetTout();
     } else {
-        camera->TranslateInSystem(system, {0, 0, -float(yoffset) * 0.25f});
+        camera->TranslateInSystem(system, {0, 0, -float(yoffset) * 0.1f});
         cameraToutAtPress = camera->GetTout();
     }
 }
@@ -92,7 +92,7 @@ void Scene::CursorPosCallback(Viewport* viewport, int x, int y, bool dragging, i
         } else {
             camera->SetTout(cameraToutAtPress);
             if (buttonState[GLFW_MOUSE_BUTTON_LEFT] != GLFW_RELEASE)
-                camera->TranslateInSystem(system, {float(xAtPress - x) / moveCoeff, float(y - yAtPress) / moveCoeff, 0});
+                camera->TranslateInSystem(system, {float(xAtPress - x) / moveCoeff / 100, float(y - yAtPress) / moveCoeff / 100, 0});
             if (buttonState[GLFW_MOUSE_BUTTON_MIDDLE] != GLFW_RELEASE)
                 camera->RotateInSystem(system, float(x - xAtPress) / 180, Axis::Z);
             if (buttonState[GLFW_MOUSE_BUTTON_RIGHT] != GLFW_RELEASE) {
