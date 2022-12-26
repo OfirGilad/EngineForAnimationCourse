@@ -55,7 +55,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
  
     material->AddTexture(0, "textures/box0.bmp", 2);
     auto sphereMesh{IglLoader::MeshFromFiles("sphere_igl", "data/sphere.obj")};
-    auto cylMesh{IglLoader::MeshFromFiles("cyl_igl","data/xcylinder.obj")};
+    auto cylMesh{IglLoader::MeshFromFiles("cyl_igl","data/zcylinder.obj")};
     auto cubeMesh{IglLoader::MeshFromFiles("cube_igl","data/cube_old.obj")};
     sphere1 = Model::Create( "sphere",sphereMesh, material);    
     cube = Model::Create( "cube", cubeMesh, material);
@@ -76,18 +76,26 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     float scaleFactor = 1; 
     cyls.push_back( Model::Create("cyl",cylMesh, material));
     cyls[0]->Scale(scaleFactor,Axis::X);
-    cyls[0]->SetCenter(Eigen::Vector3f(-0.8f*scaleFactor,0,0));
+    cyls[0]->SetCenter(Eigen::Vector3f(0,0,-0.8f*scaleFactor));
+    cyls[0]->RotateByDegree(90, Eigen::Vector3f(0,1,0));
     root->AddChild(cyls[0]);
    
     for(int i = 1;i < 3; i++)
     { 
         cyls.push_back( Model::Create("cyl", cylMesh, material));
         cyls[i]->Scale(scaleFactor,Axis::X);   
-        cyls[i]->Translate(1.6f*scaleFactor,Axis::X);
-        cyls[i]->SetCenter(Eigen::Vector3f(-0.8f*scaleFactor,0,0));
+        cyls[i]->Translate(1.6f*scaleFactor,Axis::Z);
+        cyls[i]->SetCenter(Eigen::Vector3f(0,0,-0.8f*scaleFactor));
         cyls[i-1]->AddChild(cyls[i]);
+
+        //Axis
+        axis.push_back(Model::Create("axis", coordsys, material1));
+        axis[i]->mode = 1;
+        axis[i]->Scale(4, Axis::XYZ);
+        cyls[i-1]->AddChild(axis[i]);
+        axis[i]->Translate(0.8f* scaleFactor,Axis::Z);
     }
-    cyls[0]->Translate({0.8f*scaleFactor,0,0});
+    cyls[0]->Translate({0,0,0.8f*scaleFactor});
 
     auto morphFunc = [](Model* model, cg3d::Visitor* visitor) {
       return model->meshIndex;//(model->GetMeshList())[0]->data.size()-1;
@@ -98,7 +106,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     sphere1->showWireframe = true;
     autoCube->Translate({-6,0,0});
     autoCube->Scale(1.5f);
-//    sphere1->Translate({-2,0,0});
+    sphere1->Translate({5,0,0});
 
     autoCube->showWireframe = true;
     camera->Translate(22, Axis::Z);
