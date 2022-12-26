@@ -233,6 +233,10 @@ void BasicScene::KeyCallback(Viewport* viewport, int x, int y, int key, int scan
 {
     auto system = camera->GetRotation().transpose();
 
+    // New Variables
+    Eigen::Matrix4f destination_matrix = sphere1->GetTransform();
+    Eigen::Vector3f destination_position = Eigen::Vector3f(destination_matrix.col(3).x(), destination_matrix.col(3).y(), destination_matrix.col(3).z());
+
     if (action == GLFW_PRESS || action == GLFW_REPEAT) {
         switch (key) // NOLINT(hicpp-multiway-paths-covered)
         {
@@ -260,9 +264,9 @@ void BasicScene::KeyCallback(Viewport* viewport, int x, int y, int key, int scan
             case GLFW_KEY_A:
                 camera->TranslateInSystem(system, {-0.1f, 0, 0});
                 break;
-            case GLFW_KEY_D:
-                camera->TranslateInSystem(system, {0.1f, 0, 0});
-                break;
+            //case GLFW_KEY_D:
+            //    camera->TranslateInSystem(system, {0.1f, 0, 0});
+            //    break;
             case GLFW_KEY_B:
                 camera->TranslateInSystem(system, {0, 0, 0.1f});
                 break;
@@ -295,6 +299,40 @@ void BasicScene::KeyCallback(Viewport* viewport, int x, int y, int key, int scan
                     tipIndex++;
                 }
                 break;
+
+            // New Keys
+            case GLFW_KEY_SPACE: // IK solver
+                
+                break;
+            case GLFW_KEY_P: // prints rotation matrices
+                
+                break;
+            case GLFW_KEY_T: // prints arms tip positions
+                
+                break;
+            case GLFW_KEY_D: // prints destination position
+                std::cout << "Destination Position: "
+                    << "(" << destination_position.x()
+                    << ", " << destination_position.y()
+                    << ", " << destination_position.z()
+                    << ")" << std::endl;
+                break;
+            case GLFW_KEY_N: // pick the next link, or the first one in case the last link is picked
+                
+                break;
+            //case GLFW_KEY_RIGHT: // rotates picked link around the previous link Y axis
+            //    cyls[pickedIndex]->RotateInSystem(system, -0.1f, Axis::Y);
+            //    break;
+            //case GLFW_KEY_LEFT: // rotates picked link around the previous link Y axis
+            //    cyls[pickedIndex]->RotateInSystem(system, 0.1f, Axis::Y);
+            //    break;
+            //case GLFW_KEY_UP: // rotates picked link around the current X axis
+            //    cyls[pickedIndex]->RotateInSystem(system, 0.1f, Axis::X);
+            //    break;
+            //case GLFW_KEY_DOWN: // rotates picked link around the current X axis
+            //    cyls[pickedIndex]->RotateInSystem(system, -0.1f, Axis::X);
+            //    break;
+            
         }
     }
 }
