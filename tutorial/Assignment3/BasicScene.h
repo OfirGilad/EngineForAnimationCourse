@@ -19,11 +19,11 @@ public:
 
     // New Functions
     Eigen::Vector3f GetDestinationPosition();
-    Eigen::Vector3f GetTipPosition(std::shared_ptr<cg3d::Model> arm_link);
+    Eigen::Vector3f GetLinkTipPosition(int link_id);
+    Eigen::Vector3f GetLinkSourcePosition(int link_id);
     Eigen::Vector3f RotationMatrixToEulerAngles(Eigen::Matrix3f R);
 
     void IKCyclicCoordinateDecentMethod();
-    Eigen::Vector3f GetLinkSourcePosition(int link_id);
     void fix_rotate();
 
     // New Callback Functions

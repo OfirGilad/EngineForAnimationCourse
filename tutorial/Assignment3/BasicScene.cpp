@@ -381,21 +381,31 @@ Eigen::Vector3f BasicScene::GetSpherePos()
 // New Functions
 Eigen::Vector3f BasicScene::GetDestinationPosition()
 {
-    Eigen::Matrix4f destination_transform = sphere1->GetTransform();
+    Eigen::Matrix4f destination_transform = sphere1->GetAggregatedTransform();
     Eigen::Vector3f destination_position = Eigen::Vector3f(destination_transform.col(3).x(), destination_transform.col(3).y(), destination_transform.col(3).z());
 
     return destination_position;
 }
 
-Eigen::Vector3f BasicScene::GetTipPosition(std::shared_ptr<cg3d::Model> arm_link)
+Eigen::Vector3f BasicScene::GetLinkTipPosition(int link_id)
 {
     Eigen::Vector3f cyl_length = Eigen::Vector3f(0, 0, 0.8f);
 
-    Eigen::Matrix4f arm_transform = arm_link->GetAggregatedTransform();
+    Eigen::Matrix4f arm_transform = cyls[link_id]->GetAggregatedTransform();
     Eigen::Vector3f arm_center = Eigen::Vector3f(arm_transform.col(3).x(), arm_transform.col(3).y(), arm_transform.col(3).z());
-    Eigen::Vector3f arm_tip_position = arm_center + arm_link->GetRotation() * cyl_length;
+    Eigen::Vector3f arm_tip_position = arm_center + cyls[link_id]->GetRotation() * cyl_length;
 
     return arm_tip_position;
+}
+
+Eigen::Vector3f BasicScene::GetLinkSourcePosition(int link_id) {
+    Eigen::Vector3f cyl_length = Eigen::Vector3f(0, 0, 0.8f);
+
+    Eigen::Matrix4f arm_transform = cyls[link_id]->GetAggregatedTransform();
+    Eigen::Vector3f arm_center = Eigen::Vector3f(arm_transform.col(3).x(), arm_transform.col(3).y(), arm_transform.col(3).z());
+    Eigen::Vector3f arm_source_position = arm_center - cyls[link_id]->GetRotation() * cyl_length;
+
+    return arm_source_position;
 }
 
 // Calculates rotation matrix to euler angles
@@ -443,7 +453,7 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
         int curr_link = last_link_id;
         while (curr_link != -1) {
             Eigen::Vector3f r = GetLinkSourcePosition(curr_link);
-            Eigen::Vector3f e = GetLinkSourcePosition(last_link_id);
+            Eigen::Vector3f e = GetLinkTipPosition(last_link_id);
             Eigen::Vector3f rd = target_des - r;
             Eigen::Vector3f re = e - r;
             Eigen::Vector3f normal = re.normalized().cross(rd.normalized()); //returns the plane normal
@@ -451,7 +461,7 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
 
             if (distance < delta) {
                 std::cout << "distance: " << distance << std::endl;
-                fix_rotate();
+                //fix_rotate();
                 animate_CCD = false;
                 return;
             }
@@ -464,44 +474,36 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
             float angle = acosf(dot) / 10;
             int parent_id = curr_link - 1;
 
-            if (parent_id != -1) {
-                Eigen::Vector3f rotationVec = (cyls[parent_id]->GetTransform() * cyls[curr_link]->GetTransform()).block<3, 3>(0, 0).inverse() * normal;
+            Eigen::Vector3f rotation_vector = (root->GetAggregatedTransform() * cyls[curr_link]->GetTransform()).block<3, 3>(0, 0).inverse() * normal;
 
-                cyls[curr_link]->RotateByDegree(angle, rotationVec);
-                e = GetLinkSourcePosition(last_link_id); //get new position after rotation
+            if (parent_id != -1) {
+                rotation_vector = (cyls[parent_id]->GetAggregatedTransform() * cyls[curr_link]->GetTransform()).block<3, 3>(0, 0).inverse() * normal;
+
+                cyls[curr_link]->RotateByDegree(angle, rotation_vector);
+                e = GetLinkTipPosition(last_link_id); //get new position after rotation
                 re = e - r;
                 Eigen::Vector3f r_parent = GetLinkSourcePosition(parent_id);
                 rd = r_parent - r;
 
                 //find angle between parent and link
-                float constarin = 0.5235987756;
-                float parentDot = rd.normalized().dot(re.normalized()); //get dot 
+                float constrain = 0.5235987756;
+                float parent_dot = rd.normalized().dot(re.normalized()); //get dot 
 
-                if (parentDot > 1) parentDot = 1;
-                if (parentDot < -1) parentDot = 1;
+                if (parent_dot > 1) parent_dot = 1;
+                if (parent_dot < -1) parent_dot = 1;
 
-                float parentAngle = acos(parentDot);
-                cyls[curr_link]->RotateByDegree(-angle, rotationVec); //rotate back 
+                float parent_angle = acos(parent_dot);
+                cyls[curr_link]->RotateByDegree(-angle, rotation_vector); //rotate back 
 
-                if (parentAngle < constarin) { //fix angle
-                    angle = angle - (constarin - parentAngle);
+                if (parent_angle < constrain) { //fix angle
+                    angle = angle - (constrain - parent_angle);
                 }
-
-                cyls[curr_link]->RotateByDegree(angle, rotationVec);
             }
+
+            cyls[curr_link]->RotateByDegree(angle, rotation_vector);
             curr_link = parent_id;
         }
     }
-}
-
-Eigen::Vector3f BasicScene::GetLinkSourcePosition(int link_id) {
-    Eigen::Vector3f cyl_length = Eigen::Vector3f(0, 0, 0.8f);
-
-    Eigen::Matrix4f arm_transform = cyls[link_id]->GetAggregatedTransform();
-    Eigen::Vector3f arm_center = Eigen::Vector3f(arm_transform.col(3).x(), arm_transform.col(3).y(), arm_transform.col(3).z());
-    Eigen::Vector3f arm_source_position = arm_center - cyls[link_id]->GetRotation() * cyl_length;
-
-    return arm_source_position;
 }
 
 void BasicScene::fix_rotate() {
@@ -598,9 +600,9 @@ void BasicScene::P_Callback()
 
 void BasicScene::T_Callback()
 {
-    Eigen::Vector3f arm1_tip_position = GetTipPosition(cyls[0]);
-    Eigen::Vector3f arm2_tip_position = GetTipPosition(cyls[1]);
-    Eigen::Vector3f arm3_tip_position = GetTipPosition(cyls[2]);
+    Eigen::Vector3f arm1_tip_position = GetLinkTipPosition(0);
+    Eigen::Vector3f arm2_tip_position = GetLinkTipPosition(1);
+    Eigen::Vector3f arm3_tip_position = GetLinkTipPosition(2);
 
     std::cout << "Arm1 Tip Position: "
         << "(" << arm1_tip_position.x()
