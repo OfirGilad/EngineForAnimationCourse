@@ -80,7 +80,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     cyls[0]->RotateByDegree(90, Eigen::Vector3f(0,1,0));
     root->AddChild(cyls[0]);
    
-    for(int i = 1;i < 3; i++)
+    for(int i = 1; i < 3; i++)
     { 
         cyls.push_back( Model::Create("cyl", cylMesh, material));
         cyls[i]->Scale(scaleFactor,Axis::X);   
@@ -94,6 +94,9 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
         axis[i]->Scale(4, Axis::XYZ);
         cyls[i-1]->AddChild(axis[i]);
         axis[i]->Translate(0.8f* scaleFactor,Axis::Z);
+
+        //Arm tip
+        armTipIndex = i;
     }
     cyls[0]->Translate({0,0,0.8f*scaleFactor});
 
@@ -189,8 +192,23 @@ void BasicScene::ScrollCallback(Viewport* viewport, int x, int y, int xoffset, i
     // note: there's a (small) chance the button state here precedes the mouse press/release event
     auto system = camera->GetRotation().transpose();
     if (pickedModel) {
-        pickedModel->TranslateInSystem(system, {0, 0, -float(yoffset)});
-        pickedToutAtPress = pickedModel->GetTout();
+        //pickedModel->TranslateInSystem(system, { 0, 0, -float(yoffset) });
+        //pickedToutAtPress = pickedModel->GetTout();
+
+
+        // When one link of the arm is picked and being translated move all the arm
+        // accordingly.The arm must not break!
+        // Change ScrollCallback callback to translate the picked object away and to the
+        // camera(perpendicular to camera plane).When no object is picked translate the
+        // whole scene.
+        if ((pickedModel == cyls[1]) || (pickedModel == cyls[2])) {
+            cyls[0]->TranslateInSystem(system, {0, 0, -float(yoffset)});
+            pickedToutAtPress = pickedModel->GetTout();
+        }
+        else {
+            pickedModel->TranslateInSystem(system, { 0, 0, -float(yoffset) });
+            pickedToutAtPress = pickedModel->GetTout();
+        }
     } else {
         camera->TranslateInSystem(system, {0, 0, -float(yoffset)});
         cameraToutAtPress = camera->GetTout();
@@ -205,13 +223,38 @@ void BasicScene::CursorPosCallback(Viewport* viewport, int x, int y, bool draggi
         auto angleCoeff = camera->CalcAngleCoeff(viewport->width);
         if (pickedModel) {
             //pickedModel->SetTout(pickedToutAtPress);
-            if (buttonState[GLFW_MOUSE_BUTTON_RIGHT] != GLFW_RELEASE)
-                pickedModel->TranslateInSystem(system, {-float(xAtPress - x) / moveCoeff, float(yAtPress - y) / moveCoeff, 0});
+            if (buttonState[GLFW_MOUSE_BUTTON_RIGHT] != GLFW_RELEASE) {
+                //pickedModel->TranslateInSystem(system, { -float(xAtPress - x) / moveCoeff, float(yAtPress - y) / moveCoeff, 0 });
+
+
+                // When one link of the arm is picked and being translated move all the arm
+                // accordingly.The arm must not break!
+                // Right mouse button will translate the whole scene or the picked object.
+                if ((pickedModel == cyls[1]) || (pickedModel == cyls[2])) {
+                    //pickedModel->TranslateInSystem(system * pickedModel->GetRotation(), { -float(xAtPress - x) / moveCoeff, float(yAtPress - y) / moveCoeff, 0 });
+                    cyls[0]->TranslateInSystem(system, { -float(xAtPress - x) / moveCoeff, float(yAtPress - y) / moveCoeff, 0 });
+                }
+                else {
+                    pickedModel->TranslateInSystem(system, { -float(xAtPress - x) / moveCoeff, float(yAtPress - y) / moveCoeff, 0 });
+                }
+            }
             if (buttonState[GLFW_MOUSE_BUTTON_MIDDLE] != GLFW_RELEASE)
                 pickedModel->RotateInSystem(system, float(xAtPress - x) / angleCoeff, Axis::Z);
             if (buttonState[GLFW_MOUSE_BUTTON_LEFT] != GLFW_RELEASE) {
-                pickedModel->RotateInSystem(system, float(xAtPress - x) / angleCoeff, Axis::Y);
-                pickedModel->RotateInSystem(system, float(yAtPress - y) / angleCoeff, Axis::X);
+                //pickedModel->RotateInSystem(system, float(xAtPress - x) / angleCoeff, Axis::Y);
+                //pickedModel->RotateInSystem(system, float(yAtPress - y) / angleCoeff, Axis::X);
+
+
+                // Left mouse button will rotate objects or the scene in the same manner of the arrows
+                if (pickedModel == cyls[0]) {
+                    pickedModel->RotateInSystem(system, float(xAtPress - x) / angleCoeff, Axis::Z);
+                    pickedModel->RotateInSystem(system, float(yAtPress - y) / angleCoeff, Axis::Y);
+                }
+                else {
+                    pickedModel->RotateInSystem(system, float(xAtPress - x) / angleCoeff, Axis::X);
+                    pickedModel->RotateInSystem(system, float(yAtPress - y) / angleCoeff, Axis::Y);
+                }
+                
             }
         } else {
            // camera->SetTout(cameraToutAtPress);
@@ -232,10 +275,6 @@ void BasicScene::CursorPosCallback(Viewport* viewport, int x, int y, bool draggi
 void BasicScene::KeyCallback(Viewport* viewport, int x, int y, int key, int scancode, int action, int mods)
 {
     auto system = camera->GetRotation().transpose();
-
-    // New Variables
-    Eigen::Matrix4f destination_matrix = sphere1->GetTransform();
-    Eigen::Vector3f destination_position = Eigen::Vector3f(destination_matrix.col(3).x(), destination_matrix.col(3).y(), destination_matrix.col(3).z());
 
     if (action == GLFW_PRESS || action == GLFW_REPEAT) {
         switch (key) // NOLINT(hicpp-multiway-paths-covered)
@@ -308,17 +347,13 @@ void BasicScene::KeyCallback(Viewport* viewport, int x, int y, int key, int scan
                 
                 break;
             case GLFW_KEY_T: // prints arms tip positions
-                
+                T_Callback();
                 break;
             case GLFW_KEY_D: // prints destination position
-                std::cout << "Destination Position: "
-                    << "(" << destination_position.x()
-                    << ", " << destination_position.y()
-                    << ", " << destination_position.z()
-                    << ")" << std::endl;
+                D_Callback();
                 break;
             case GLFW_KEY_N: // pick the next link, or the first one in case the last link is picked
-                
+                N_Callback();
                 break;
             //case GLFW_KEY_RIGHT: // rotates picked link around the previous link Y axis
             //    cyls[pickedIndex]->RotateInSystem(system, -0.1f, Axis::Y);
@@ -343,4 +378,43 @@ Eigen::Vector3f BasicScene::GetSpherePos()
       Eigen::Vector3f res;
       res = cyls[tipIndex]->GetRotation()*l;   
       return res;  
+}
+
+// New Callback functions
+void BasicScene::T_Callback()
+{
+    Eigen::Vector3f cyl_length = Eigen::Vector3f(0, 1.6f, 0);
+    Eigen::Vector3f arm_tip_position = cyls[armTipIndex]->GetRotation() * cyl_length;
+
+    std::cout << "Arm Tip Position: "
+        << "(" << arm_tip_position.x()
+        << ", " << arm_tip_position.y()
+        << ", " << arm_tip_position.z()
+        << ")" << std::endl;
+}
+
+void BasicScene::D_Callback() 
+{
+    Eigen::Matrix4f destination_matrix = sphere1->GetTransform();
+    Eigen::Vector3f destination_position = Eigen::Vector3f(destination_matrix.col(3).x(), destination_matrix.col(3).y(), destination_matrix.col(3).z());
+
+    std::cout << "Destination Position: "
+        << "(" << destination_position.x()
+        << ", " << destination_position.y()
+        << ", " << destination_position.z()
+        << ")" << std::endl;
+}
+
+void BasicScene::N_Callback()
+{
+    if (pickedModel == cyls[0]) {
+        pickedModel = cyls[1];
+    }
+    else if (pickedModel == cyls[1]) {
+        pickedModel = cyls[2];
+    }
+    // Last link or any other model
+    else {
+        pickedModel = cyls[0];
+    }
 }
