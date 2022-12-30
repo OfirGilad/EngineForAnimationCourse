@@ -40,7 +40,4 @@ private:
     Eigen::VectorXi EQ;
   // If an edge were collapsed, we'd collapse it to these points:
     Eigen::MatrixXd V, C, N, T, points,edges,colors;
-
-    // New Variables
-    int armTipIndex = 0;
 };

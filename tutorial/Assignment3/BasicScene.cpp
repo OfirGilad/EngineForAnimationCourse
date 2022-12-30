@@ -94,9 +94,6 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
         axis[i]->Scale(4, Axis::XYZ);
         cyls[i-1]->AddChild(axis[i]);
         axis[i]->Translate(0.8f* scaleFactor,Axis::Z);
-
-        //Arm tip
-        armTipIndex = i;
     }
     cyls[0]->Translate({0,0,0.8f*scaleFactor});
 
@@ -246,15 +243,14 @@ void BasicScene::CursorPosCallback(Viewport* viewport, int x, int y, bool draggi
 
 
                 // Left mouse button will rotate objects or the scene in the same manner of the arrows
+                pickedModel->RotateInSystem(system, float(xAtPress - x) / angleCoeff, Axis::Y);
+
                 if (pickedModel == cyls[0]) {
-                    pickedModel->RotateInSystem(system, float(xAtPress - x) / angleCoeff, Axis::Z);
-                    pickedModel->RotateInSystem(system, float(yAtPress - y) / angleCoeff, Axis::Y);
+                    pickedModel->RotateInSystem(system, float(yAtPress - y) / angleCoeff, Axis::X);
                 }
                 else {
-                    pickedModel->RotateInSystem(system, float(xAtPress - x) / angleCoeff, Axis::X);
-                    pickedModel->RotateInSystem(system, float(yAtPress - y) / angleCoeff, Axis::Y);
-                }
-                
+                    pickedModel->RotateInSystem(system, float(yAtPress - y) / angleCoeff, Axis::Z);
+                } 
             }
         } else {
            // camera->SetTout(cameraToutAtPress);
@@ -282,27 +278,27 @@ void BasicScene::KeyCallback(Viewport* viewport, int x, int y, int key, int scan
             case GLFW_KEY_ESCAPE:
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
                 break;
-            case GLFW_KEY_UP:
-                cyls[pickedIndex]->RotateInSystem(system, 0.1f, Axis::X);
-                break;
-            case GLFW_KEY_DOWN:
-                cyls[pickedIndex]->RotateInSystem(system, -0.1f, Axis::X);
-                break;
-            case GLFW_KEY_LEFT:
-                cyls[pickedIndex]->RotateInSystem(system, 0.1f, Axis::Y);
-                break;
-            case GLFW_KEY_RIGHT:
-                cyls[pickedIndex]->RotateInSystem(system, -0.1f, Axis::Y);
-                break;
-            case GLFW_KEY_W:
-                camera->TranslateInSystem(system, {0, 0.1f, 0});
-                break;
-            case GLFW_KEY_S:
-                camera->TranslateInSystem(system, {0, -0.1f, 0});
-                break;
-            case GLFW_KEY_A:
-                camera->TranslateInSystem(system, {-0.1f, 0, 0});
-                break;
+            //case GLFW_KEY_UP:
+            //    cyls[pickedIndex]->RotateInSystem(system, 0.1f, Axis::X);
+            //    break;
+            //case GLFW_KEY_DOWN:
+            //    cyls[pickedIndex]->RotateInSystem(system, -0.1f, Axis::X);
+            //    break;
+            //case GLFW_KEY_LEFT:
+            //    cyls[pickedIndex]->RotateInSystem(system, 0.1f, Axis::Y);
+            //    break;
+            //case GLFW_KEY_RIGHT:
+            //    cyls[pickedIndex]->RotateInSystem(system, -0.1f, Axis::Y);
+            //    break;
+            //case GLFW_KEY_W:
+            //    camera->TranslateInSystem(system, {0, 0.1f, 0});
+            //    break;
+            //case GLFW_KEY_S:
+            //    camera->TranslateInSystem(system, {0, -0.1f, 0});
+            //    break;
+            //case GLFW_KEY_A:
+            //    camera->TranslateInSystem(system, {-0.1f, 0, 0});
+            //    break;
             //case GLFW_KEY_D:
             //    camera->TranslateInSystem(system, {0.1f, 0, 0});
             //    break;
@@ -313,7 +309,7 @@ void BasicScene::KeyCallback(Viewport* viewport, int x, int y, int key, int scan
                 camera->TranslateInSystem(system, {0, 0, -0.1f});
                 break;
             case GLFW_KEY_1:
-                if( pickedIndex > 0)
+                if(pickedIndex > 0)
                   pickedIndex--;
                 break;
             case GLFW_KEY_2:
@@ -321,7 +317,7 @@ void BasicScene::KeyCallback(Viewport* viewport, int x, int y, int key, int scan
                     pickedIndex++;
                 break;
             case GLFW_KEY_3:
-                if( tipIndex >= 0)
+                if(tipIndex >= 0)
                 {
                   if(tipIndex == cyls.size())
                     tipIndex--;
@@ -344,7 +340,7 @@ void BasicScene::KeyCallback(Viewport* viewport, int x, int y, int key, int scan
                 
                 break;
             case GLFW_KEY_P: // prints rotation matrices
-                
+                P_Callback();
                 break;
             case GLFW_KEY_T: // prints arms tip positions
                 T_Callback();
@@ -355,18 +351,18 @@ void BasicScene::KeyCallback(Viewport* viewport, int x, int y, int key, int scan
             case GLFW_KEY_N: // pick the next link, or the first one in case the last link is picked
                 N_Callback();
                 break;
-            //case GLFW_KEY_RIGHT: // rotates picked link around the previous link Y axis
-            //    cyls[pickedIndex]->RotateInSystem(system, -0.1f, Axis::Y);
-            //    break;
-            //case GLFW_KEY_LEFT: // rotates picked link around the previous link Y axis
-            //    cyls[pickedIndex]->RotateInSystem(system, 0.1f, Axis::Y);
-            //    break;
-            //case GLFW_KEY_UP: // rotates picked link around the current X axis
-            //    cyls[pickedIndex]->RotateInSystem(system, 0.1f, Axis::X);
-            //    break;
-            //case GLFW_KEY_DOWN: // rotates picked link around the current X axis
-            //    cyls[pickedIndex]->RotateInSystem(system, -0.1f, Axis::X);
-            //    break;
+            case GLFW_KEY_RIGHT: // rotates picked link around the previous link Y axis
+                Right_Callback();
+                break;
+            case GLFW_KEY_LEFT: // rotates picked link around the previous link Y axis
+                Left_Callback();
+                break;
+            case GLFW_KEY_UP: // rotates picked link around the current X axis
+                Up_Callback();
+                break;
+            case GLFW_KEY_DOWN: // rotates picked link around the current X axis
+                Down_Callback();
+                break;
             
         }
     }
@@ -381,15 +377,51 @@ Eigen::Vector3f BasicScene::GetSpherePos()
 }
 
 // New Callback functions
+void BasicScene::P_Callback()
+{
+    Eigen::Matrix4f scene_rotation = root->GetRotation();
+
+    std::cout << "Scene Rotation: " << std::endl
+        << "(" << scene_rotation.row(0).x() << "," << scene_rotation.row(0).y() << "," << scene_rotation.row(0).z() << ")" << std::endl
+        << "(" << scene_rotation.row(1).x() << "," << scene_rotation.row(1).y() << "," << scene_rotation.row(1).z() << ")" << std::endl
+        << "(" << scene_rotation.row(2).x() << "," << scene_rotation.row(2).y() << "," << scene_rotation.row(2).z() << ")" << std::endl;
+}
+
 void BasicScene::T_Callback()
 {
-    Eigen::Vector3f cyl_length = Eigen::Vector3f(0, 1.6f, 0);
-    Eigen::Vector3f arm_tip_position = cyls[armTipIndex]->GetRotation() * cyl_length;
+    Eigen::Vector3f cyl_length = Eigen::Vector3f(0, 0, 0.8f);
 
-    std::cout << "Arm Tip Position: "
-        << "(" << arm_tip_position.x()
-        << ", " << arm_tip_position.y()
-        << ", " << arm_tip_position.z()
+    //Arm1 tip
+    Eigen::Matrix4f arm1_matrix = cyls[0]->GetAggregatedTransform();
+    Eigen::Vector3f arm1_center = Eigen::Vector3f(arm1_matrix.col(3).x(), arm1_matrix.col(3).y(), arm1_matrix.col(3).z());
+    Eigen::Vector3f arm1_tip_position = arm1_center + cyls[0]->GetRotation() * cyl_length;
+
+    //Arm2 tip
+    Eigen::Matrix4f arm2_matrix = cyls[1]->GetAggregatedTransform();
+    Eigen::Vector3f arm2_center = Eigen::Vector3f(arm2_matrix.col(3).x(), arm2_matrix.col(3).y(), arm2_matrix.col(3).z());
+    Eigen::Vector3f arm2_tip_position = arm2_center + cyls[1]->GetRotation() * cyl_length;
+
+    //Arm3 tip
+    Eigen::Matrix4f arm3_matrix = cyls[2]->GetAggregatedTransform();
+    Eigen::Vector3f arm3_center = Eigen::Vector3f(arm3_matrix.col(3).x(), arm3_matrix.col(3).y(), arm3_matrix.col(3).z());
+    Eigen::Vector3f arm3_tip_position = arm3_center + cyls[2]->GetRotation() * cyl_length;
+
+    std::cout << "Arm1 Tip Position: "
+        << "(" << arm1_tip_position.x()
+        << ", " << arm1_tip_position.y()
+        << ", " << arm1_tip_position.z()
+        << ")" << std::endl;
+
+    std::cout << "Arm2 Tip Position: "
+        << "(" << arm2_tip_position.x()
+        << ", " << arm2_tip_position.y()
+        << ", " << arm2_tip_position.z()
+        << ")" << std::endl;
+
+    std::cout << "Arm3 Tip Position: "
+        << "(" << arm3_tip_position.x()
+        << ", " << arm3_tip_position.y()
+        << ", " << arm3_tip_position.z()
         << ")" << std::endl;
 }
 
@@ -416,5 +448,65 @@ void BasicScene::N_Callback()
     // Last link or any other model
     else {
         pickedModel = cyls[0];
+    }
+}
+
+void BasicScene::Right_Callback()
+{
+    auto system = camera->GetRotation().transpose();
+
+    if (pickedModel == cyls[0]) {
+        pickedModel->RotateInSystem(system, -0.1f, Axis::Y);
+    }
+    else if ((pickedModel == cyls[1]) || (pickedModel == cyls[2])) {
+        pickedModel->RotateInSystem(system, -0.1f, Axis::Y);
+    }
+    else {
+        camera->TranslateInSystem(system, { 0.1f, 0, 0 });
+    }
+}
+
+void BasicScene::Left_Callback()
+{
+    auto system = camera->GetRotation().transpose();
+
+    if (pickedModel == cyls[0]) {
+        pickedModel->RotateInSystem(system, 0.1f, Axis::Y);
+    }
+    else if ((pickedModel == cyls[1]) || (pickedModel == cyls[2])) {
+        pickedModel->RotateInSystem(system, 0.1f, Axis::Y);
+    }
+    else {
+        camera->TranslateInSystem(system, { -0.1f, 0, 0 });
+    }
+}
+
+void BasicScene::Up_Callback()
+{
+    auto system = camera->GetRotation().transpose();
+
+    if (pickedModel == cyls[0]) {
+        pickedModel->RotateInSystem(system, 0.1f, Axis::X);
+    }
+    else if ((pickedModel == cyls[1]) || (pickedModel == cyls[2])) {
+        pickedModel->RotateInSystem(system, 0.1f, Axis::Z);
+    }
+    else {
+        camera->TranslateInSystem(system, { 0, 0.1f, 0 });
+    }
+}
+
+void BasicScene::Down_Callback()
+{
+    auto system = camera->GetRotation().transpose();
+
+    if (pickedModel == cyls[0]) {
+        pickedModel->RotateInSystem(system, -0.1f, Axis::X);
+    }
+    else if ((pickedModel == cyls[1]) || (pickedModel == cyls[2])) {
+        pickedModel->RotateInSystem(system, -0.1f, Axis::Z);
+    }
+    else {
+        camera->TranslateInSystem(system, { 0, -0.1f, 0 });
     }
 }
