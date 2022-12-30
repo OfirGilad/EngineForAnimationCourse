@@ -376,35 +376,73 @@ Eigen::Vector3f BasicScene::GetSpherePos()
       return res;  
 }
 
-// New Callback functions
+// New Functions
+Eigen::Vector3f BasicScene::GetDestinationPosition()
+{
+    Eigen::Matrix4f destination_transform = sphere1->GetTransform();
+    Eigen::Vector3f destination_position = Eigen::Vector3f(destination_transform.col(3).x(), destination_transform.col(3).y(), destination_transform.col(3).z());
+
+    return destination_position;
+}
+
+Eigen::Vector3f BasicScene::GetTipPosition(std::shared_ptr<cg3d::Model> arm_link)
+{
+    Eigen::Vector3f cyl_length = Eigen::Vector3f(0, 0, 0.8f);
+
+    Eigen::Matrix4f arm_transform = arm_link->GetAggregatedTransform();
+    Eigen::Vector3f arm_center = Eigen::Vector3f(arm_transform.col(3).x(), arm_transform.col(3).y(), arm_transform.col(3).z());
+    Eigen::Vector3f arm_tip_position = arm_center + arm_link->GetRotation() * cyl_length;
+
+    return arm_tip_position;
+}
+
+// New Callback Functions
+void BasicScene::Space_Callback()
+{
+    std::cout << "IK Solver" << std::endl;
+}
+
 void BasicScene::P_Callback()
 {
-    Eigen::Matrix3f scene_rotation = root->GetRotation();
+    if (pickedModel == cyls[0]) {
+        Eigen::Matrix3f arm1_rotation = pickedModel->GetRotation();
 
-    std::cout << "Scene Rotation: " << std::endl
-        << "(" << scene_rotation.row(0).x() << "," << scene_rotation.row(0).y() << "," << scene_rotation.row(0).z() << ")" << std::endl
-        << "(" << scene_rotation.row(1).x() << "," << scene_rotation.row(1).y() << "," << scene_rotation.row(1).z() << ")" << std::endl
-        << "(" << scene_rotation.row(2).x() << "," << scene_rotation.row(2).y() << "," << scene_rotation.row(2).z() << ")" << std::endl;
+        std::cout << "Arm1 Rotation: " << std::endl
+            << "(" << arm1_rotation.row(0).x() << "," << arm1_rotation.row(0).y() << "," << arm1_rotation.row(0).z() << ")" << std::endl
+            << "(" << arm1_rotation.row(1).x() << "," << arm1_rotation.row(1).y() << "," << arm1_rotation.row(1).z() << ")" << std::endl
+            << "(" << arm1_rotation.row(2).x() << "," << arm1_rotation.row(2).y() << "," << arm1_rotation.row(2).z() << ")" << std::endl;
+    }
+    else if (pickedModel == cyls[1]) {
+        Eigen::Matrix3f arm2_rotation = pickedModel->GetRotation();
+
+        std::cout << "Arm2 Rotation: " << std::endl
+            << "(" << arm2_rotation.row(0).x() << "," << arm2_rotation.row(0).y() << "," << arm2_rotation.row(0).z() << ")" << std::endl
+            << "(" << arm2_rotation.row(1).x() << "," << arm2_rotation.row(1).y() << "," << arm2_rotation.row(1).z() << ")" << std::endl
+            << "(" << arm2_rotation.row(2).x() << "," << arm2_rotation.row(2).y() << "," << arm2_rotation.row(2).z() << ")" << std::endl;
+    }
+    else if (pickedModel == cyls[2]) {
+        Eigen::Matrix3f arm3_rotation = pickedModel->GetRotation();
+
+        std::cout << "Arm3 Rotation: " << std::endl
+            << "(" << arm3_rotation.row(0).x() << "," << arm3_rotation.row(0).y() << "," << arm3_rotation.row(0).z() << ")" << std::endl
+            << "(" << arm3_rotation.row(1).x() << "," << arm3_rotation.row(1).y() << "," << arm3_rotation.row(1).z() << ")" << std::endl
+            << "(" << arm3_rotation.row(2).x() << "," << arm3_rotation.row(2).y() << "," << arm3_rotation.row(2).z() << ")" << std::endl;
+    }
+    else {
+        Eigen::Matrix3f scene_rotation = root->GetRotation();
+
+        std::cout << "Scene Rotation: " << std::endl
+            << "(" << scene_rotation.row(0).x() << "," << scene_rotation.row(0).y() << "," << scene_rotation.row(0).z() << ")" << std::endl
+            << "(" << scene_rotation.row(1).x() << "," << scene_rotation.row(1).y() << "," << scene_rotation.row(1).z() << ")" << std::endl
+            << "(" << scene_rotation.row(2).x() << "," << scene_rotation.row(2).y() << "," << scene_rotation.row(2).z() << ")" << std::endl;
+    }
 }
 
 void BasicScene::T_Callback()
 {
-    Eigen::Vector3f cyl_length = Eigen::Vector3f(0, 0, 0.8f);
-
-    //Arm1 tip
-    Eigen::Matrix4f arm1_matrix = cyls[0]->GetAggregatedTransform();
-    Eigen::Vector3f arm1_center = Eigen::Vector3f(arm1_matrix.col(3).x(), arm1_matrix.col(3).y(), arm1_matrix.col(3).z());
-    Eigen::Vector3f arm1_tip_position = arm1_center + cyls[0]->GetRotation() * cyl_length;
-
-    //Arm2 tip
-    Eigen::Matrix4f arm2_matrix = cyls[1]->GetAggregatedTransform();
-    Eigen::Vector3f arm2_center = Eigen::Vector3f(arm2_matrix.col(3).x(), arm2_matrix.col(3).y(), arm2_matrix.col(3).z());
-    Eigen::Vector3f arm2_tip_position = arm2_center + cyls[1]->GetRotation() * cyl_length;
-
-    //Arm3 tip
-    Eigen::Matrix4f arm3_matrix = cyls[2]->GetAggregatedTransform();
-    Eigen::Vector3f arm3_center = Eigen::Vector3f(arm3_matrix.col(3).x(), arm3_matrix.col(3).y(), arm3_matrix.col(3).z());
-    Eigen::Vector3f arm3_tip_position = arm3_center + cyls[2]->GetRotation() * cyl_length;
+    Eigen::Vector3f arm1_tip_position = GetTipPosition(cyls[0]);
+    Eigen::Vector3f arm2_tip_position = GetTipPosition(cyls[1]);
+    Eigen::Vector3f arm3_tip_position = GetTipPosition(cyls[2]);
 
     std::cout << "Arm1 Tip Position: "
         << "(" << arm1_tip_position.x()
@@ -427,8 +465,7 @@ void BasicScene::T_Callback()
 
 void BasicScene::D_Callback() 
 {
-    Eigen::Matrix4f destination_matrix = sphere1->GetTransform();
-    Eigen::Vector3f destination_position = Eigen::Vector3f(destination_matrix.col(3).x(), destination_matrix.col(3).y(), destination_matrix.col(3).z());
+    Eigen::Vector3f destination_position = GetDestinationPosition();
 
     std::cout << "Destination Position: "
         << "(" << destination_position.x()

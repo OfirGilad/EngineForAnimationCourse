@@ -18,6 +18,9 @@ public:
     Eigen::Vector3f GetSpherePos();
 
     // New Functions
+    Eigen::Vector3f GetDestinationPosition();
+    Eigen::Vector3f GetTipPosition(std::shared_ptr<cg3d::Model> arm_link);
+
     void Space_Callback();
     void P_Callback();
     void T_Callback();
