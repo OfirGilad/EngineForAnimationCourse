@@ -20,7 +20,13 @@ public:
     // New Functions
     Eigen::Vector3f GetDestinationPosition();
     Eigen::Vector3f GetTipPosition(std::shared_ptr<cg3d::Model> arm_link);
+    Eigen::Vector3f RotationMatrixToEulerAngles(Eigen::Matrix3f R);
 
+    void IKCyclicCoordinateDecentMethod();
+    Eigen::Vector3f GetLinkSourcePosition(int link_id);
+    void fix_rotate();
+
+    // New Callback Functions
     void Space_Callback();
     void P_Callback();
     void T_Callback();
@@ -43,4 +49,8 @@ private:
     Eigen::VectorXi EQ;
   // If an edge were collapsed, we'd collapse it to these points:
     Eigen::MatrixXd V, C, N, T, points,edges,colors;
+
+    // New Variables
+    bool animate_CCD = false;
+    float delta = 0.05;
 };

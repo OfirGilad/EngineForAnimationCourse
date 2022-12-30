@@ -150,6 +150,8 @@ void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, con
     program.SetUniform4f("light_position", 0.0, 15.0f, 0.0, 1.0f);
 //    cyl->Rotate(0.001f, Axis::Y);
     cube->Rotate(0.1f, Axis::XYZ);
+
+    IKCyclicCoordinateDecentMethod();
 }
 
 void BasicScene::MouseCallback(Viewport* viewport, int x, int y, int button, int action, int mods, int buttonState[])
@@ -337,7 +339,7 @@ void BasicScene::KeyCallback(Viewport* viewport, int x, int y, int key, int scan
 
             // New Keys
             case GLFW_KEY_SPACE: // IK solver
-                
+                Space_Callback();
                 break;
             case GLFW_KEY_P: // prints rotation matrices
                 P_Callback();
@@ -396,10 +398,142 @@ Eigen::Vector3f BasicScene::GetTipPosition(std::shared_ptr<cg3d::Model> arm_link
     return arm_tip_position;
 }
 
+// Calculates rotation matrix to euler angles
+// The result is the same as MATLAB except the order
+// of the euler angles (x and z are swapped).
+// https://learnopencv.com/rotation-matrix-to-euler-angles/
+Eigen::Vector3f BasicScene::RotationMatrixToEulerAngles(Eigen::Matrix3f R)
+{
+    float sy = sqrt(R.row(0).x() * R.row(0).x() + R.row(1).x() * R.row(1).x());
+
+    bool singular = sy < 1e-6; // If
+
+    float x, y, z;
+    if (!singular)
+    {
+        x = atan2(R.row(2).y(), R.row(2).z());
+        y = atan2(-R.row(2).x(), sy);
+        z = atan2(R.row(1).x(), R.row(0).x());
+    }
+    else
+    {
+        x = atan2(-R.row(1).z(), R.row(1).y());
+        y = atan2(-R.row(2).x(), sy);
+        z = 0;
+    }
+    return Eigen::Vector3f(x, y, z);
+}
+
+void BasicScene::IKCyclicCoordinateDecentMethod() {
+    if (animate_CCD) {
+        int first_link_id = 0;
+        int last_link_id = 2;
+        int num_of_links = 3;
+        float link_length = 1.6f;
+
+        Eigen::Vector3f target_des = GetDestinationPosition();
+        Eigen::Vector3f first_link_pos = GetLinkSourcePosition(first_link_id);
+
+        if ((target_des - first_link_pos).norm() > link_length * num_of_links) {
+            std::cout << "cannot reach" << std::endl;
+            animate_CCD = false;
+            return;
+        }
+
+        int curr_link = last_link_id;
+        while (curr_link != -1) {
+            Eigen::Vector3f r = GetLinkSourcePosition(curr_link);
+            Eigen::Vector3f e = GetLinkSourcePosition(last_link_id);
+            Eigen::Vector3f rd = target_des - r;
+            Eigen::Vector3f re = e - r;
+            Eigen::Vector3f normal = re.normalized().cross(rd.normalized()); //returns the plane normal
+            float distance = (target_des - e).norm();
+
+            if (distance < delta) {
+                std::cout << "distance: " << distance << std::endl;
+                fix_rotate();
+                animate_CCD = false;
+                return;
+            }
+            float dot = rd.normalized().dot(re.normalized());
+
+            //check that it is beetween -1 to 1
+            if (dot > 1) dot = 1;
+            if (dot < -1) dot = -1;
+
+            float angle = acosf(dot) / 10;
+            int parent_id = curr_link - 1;
+
+            if (parent_id != -1) {
+                Eigen::Vector3f rotationVec = (cyls[parent_id]->GetTransform() * cyls[curr_link]->GetTransform()).block<3, 3>(0, 0).inverse() * normal;
+
+                cyls[curr_link]->RotateByDegree(angle, rotationVec);
+                e = GetLinkSourcePosition(last_link_id); //get new position after rotation
+                re = e - r;
+                Eigen::Vector3f r_parent = GetLinkSourcePosition(parent_id);
+                rd = r_parent - r;
+
+                //find angle between parent and link
+                float constarin = 0.5235987756;
+                float parentDot = rd.normalized().dot(re.normalized()); //get dot 
+
+                if (parentDot > 1) parentDot = 1;
+                if (parentDot < -1) parentDot = 1;
+
+                float parentAngle = acos(parentDot);
+                cyls[curr_link]->RotateByDegree(-angle, rotationVec); //rotate back 
+
+                if (parentAngle < constarin) { //fix angle
+                    angle = angle - (constarin - parentAngle);
+                }
+
+                cyls[curr_link]->RotateByDegree(angle, rotationVec);
+            }
+            curr_link = parent_id;
+        }
+    }
+}
+
+Eigen::Vector3f BasicScene::GetLinkSourcePosition(int link_id) {
+    Eigen::Vector3f cyl_length = Eigen::Vector3f(0, 0, 0.8f);
+
+    Eigen::Matrix4f arm_transform = cyls[link_id]->GetAggregatedTransform();
+    Eigen::Vector3f arm_center = Eigen::Vector3f(arm_transform.col(3).x(), arm_transform.col(3).y(), arm_transform.col(3).z());
+    Eigen::Vector3f arm_source_position = arm_center - cyls[link_id]->GetRotation() * cyl_length;
+
+    return arm_source_position;
+}
+
+void BasicScene::fix_rotate() {
+    int first_link_id = 0;
+    int num_of_links = 3;
+    auto system = camera->GetRotation().transpose() * GetRotation();
+
+    Eigen::Vector3f Z(0, 0, 1);
+    int curr_link = first_link_id;
+
+    while (curr_link != num_of_links) {
+        Eigen::Matrix3f R = cyls[curr_link]->GetRotation();
+        Eigen::Vector3f ea = R.eulerAngles(2, 0, 2);//get the rotation angles
+        float angleZ = ea[2];
+        cyls[curr_link]->RotateByDegree(-angleZ, Z);
+
+        curr_link = curr_link + 1;
+        if (curr_link != num_of_links) {
+            cyls[curr_link]->RotateInSystem(system * cyls[curr_link]->GetRotation(), angleZ, Axis::Z);
+        }
+    }
+}
+
 // New Callback Functions
 void BasicScene::Space_Callback()
 {
-    std::cout << "IK Solver" << std::endl;
+    if (animate_CCD == false) {
+        animate_CCD = true;
+    }
+    else {
+        animate_CCD = false;
+    }
 }
 
 void BasicScene::P_Callback()
@@ -411,6 +545,14 @@ void BasicScene::P_Callback()
             << "(" << arm1_rotation.row(0).x() << "," << arm1_rotation.row(0).y() << "," << arm1_rotation.row(0).z() << ")" << std::endl
             << "(" << arm1_rotation.row(1).x() << "," << arm1_rotation.row(1).y() << "," << arm1_rotation.row(1).z() << ")" << std::endl
             << "(" << arm1_rotation.row(2).x() << "," << arm1_rotation.row(2).y() << "," << arm1_rotation.row(2).z() << ")" << std::endl;
+
+        Eigen::Vector3f arm1_euler_angles = arm1_rotation.eulerAngles(2, 0, 2);
+
+        std::cout << "Arm1 Euler Angles: "
+            << "(" << arm1_euler_angles.x()
+            << ", " << arm1_euler_angles.y()
+            << ", " << arm1_euler_angles.z()
+            << ")" << std::endl;
     }
     else if (pickedModel == cyls[1]) {
         Eigen::Matrix3f arm2_rotation = pickedModel->GetRotation();
@@ -419,6 +561,14 @@ void BasicScene::P_Callback()
             << "(" << arm2_rotation.row(0).x() << "," << arm2_rotation.row(0).y() << "," << arm2_rotation.row(0).z() << ")" << std::endl
             << "(" << arm2_rotation.row(1).x() << "," << arm2_rotation.row(1).y() << "," << arm2_rotation.row(1).z() << ")" << std::endl
             << "(" << arm2_rotation.row(2).x() << "," << arm2_rotation.row(2).y() << "," << arm2_rotation.row(2).z() << ")" << std::endl;
+
+        Eigen::Vector3f arm2_euler_angles = arm2_rotation.eulerAngles(2, 0, 2);
+
+        std::cout << "Arm2 Euler Angles: "
+            << "(" << arm2_euler_angles.x()
+            << ", " << arm2_euler_angles.y()
+            << ", " << arm2_euler_angles.z()
+            << ")" << std::endl;
     }
     else if (pickedModel == cyls[2]) {
         Eigen::Matrix3f arm3_rotation = pickedModel->GetRotation();
@@ -427,6 +577,14 @@ void BasicScene::P_Callback()
             << "(" << arm3_rotation.row(0).x() << "," << arm3_rotation.row(0).y() << "," << arm3_rotation.row(0).z() << ")" << std::endl
             << "(" << arm3_rotation.row(1).x() << "," << arm3_rotation.row(1).y() << "," << arm3_rotation.row(1).z() << ")" << std::endl
             << "(" << arm3_rotation.row(2).x() << "," << arm3_rotation.row(2).y() << "," << arm3_rotation.row(2).z() << ")" << std::endl;
+
+        Eigen::Vector3f arm3_euler_angles = arm3_rotation.eulerAngles(2, 0, 2);
+
+        std::cout << "Arm3 Euler Angles: "
+            << "(" << arm3_euler_angles.x()
+            << ", " << arm3_euler_angles.y()
+            << ", " << arm3_euler_angles.z()
+            << ")" << std::endl;
     }
     else {
         Eigen::Matrix3f scene_rotation = root->GetRotation();
