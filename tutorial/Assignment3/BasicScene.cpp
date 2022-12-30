@@ -379,7 +379,7 @@ Eigen::Vector3f BasicScene::GetSpherePos()
 // New Callback functions
 void BasicScene::P_Callback()
 {
-    Eigen::Matrix4f scene_rotation = root->GetRotation();
+    Eigen::Matrix3f scene_rotation = root->GetRotation();
 
     std::cout << "Scene Rotation: " << std::endl
         << "(" << scene_rotation.row(0).x() << "," << scene_rotation.row(0).y() << "," << scene_rotation.row(0).z() << ")" << std::endl
