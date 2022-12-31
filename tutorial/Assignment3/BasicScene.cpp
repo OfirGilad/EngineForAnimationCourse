@@ -490,7 +490,7 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
                 float parent_dot = rd.normalized().dot(re.normalized()); //get dot 
 
                 if (parent_dot > 1) parent_dot = 1;
-                if (parent_dot < -1) parent_dot = 1;
+                if (parent_dot < -1) parent_dot = -1;
 
                 float parent_angle = acos(parent_dot);
                 cyls[curr_link]->RotateByDegree(-angle, rotation_vector); //rotate back 
