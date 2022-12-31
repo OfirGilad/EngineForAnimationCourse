@@ -441,23 +441,24 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
         int num_of_links = 3;
         float link_length = 1.6f;
 
-        Eigen::Vector3f target_des = GetDestinationPosition();
-        Eigen::Vector3f first_link_pos = GetLinkSourcePosition(first_link_id);
+        Eigen::Vector3f D = GetDestinationPosition();
+        Eigen::Vector3f first_link_position = GetLinkSourcePosition(first_link_id);
 
-        if ((target_des - first_link_pos).norm() > link_length * num_of_links) {
+        if ((D - first_link_position).norm() > link_length * num_of_links) {
             std::cout << "cannot reach" << std::endl;
             animate_CCD = false;
             return;
         }
 
         int curr_link = last_link_id;
+
         while (curr_link != -1) {
-            Eigen::Vector3f r = GetLinkSourcePosition(curr_link);
-            Eigen::Vector3f e = GetLinkTipPosition(last_link_id);
-            Eigen::Vector3f rd = target_des - r;
-            Eigen::Vector3f re = e - r;
-            Eigen::Vector3f normal = re.normalized().cross(rd.normalized()); //returns the plane normal
-            float distance = (target_des - e).norm();
+            Eigen::Vector3f R = GetLinkSourcePosition(curr_link);
+            Eigen::Vector3f E = GetLinkTipPosition(last_link_id);
+            Eigen::Vector3f RD = D - R;
+            Eigen::Vector3f RE = E - R;
+            Eigen::Vector3f normal = RE.normalized().cross(RD.normalized()); //returns the plane normal
+            float distance = (D - E).norm();
 
             if (distance < delta) {
                 std::cout << "distance: " << distance << std::endl;
@@ -465,40 +466,46 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
                 animate_CCD = false;
                 return;
             }
-            float dot = rd.normalized().dot(re.normalized());
 
-            //check that it is beetween -1 to 1
+            //get dot product
+            float dot = RD.normalized().dot(RE.normalized());
+
+            //check that it is between -1 to 1
             if (dot > 1) dot = 1;
             if (dot < -1) dot = -1;
 
-            float angle = acosf(dot) / 10;
+            float angle = (acosf(dot) * (180.f / 3.14f)) / 100.f;
             int parent_id = curr_link - 1;
 
-            Eigen::Vector3f rotation_vector = (root->GetAggregatedTransform() * cyls[curr_link]->GetTransform()).block<3, 3>(0, 0).inverse() * normal;
+            Eigen::Vector3f rotation_vector = cyls[curr_link]->GetAggregatedTransform().block<3, 3>(0, 0).inverse() * normal;
 
-            if (parent_id != -1) {
-                rotation_vector = (cyls[parent_id]->GetAggregatedTransform() * cyls[curr_link]->GetTransform()).block<3, 3>(0, 0).inverse() * normal;
+            //the link has a parent
+            //if (parent_id != -1) {
+            //    cyls[curr_link]->RotateByDegree(angle, rotation_vector);
 
-                cyls[curr_link]->RotateByDegree(angle, rotation_vector);
-                e = GetLinkTipPosition(last_link_id); //get new position after rotation
-                re = e - r;
-                Eigen::Vector3f r_parent = GetLinkSourcePosition(parent_id);
-                rd = r_parent - r;
+            //    E = GetLinkTipPosition(last_link_id); //get new position after rotation
+            //    RE = E - R;
+            //    Eigen::Vector3f R_parent = GetLinkSourcePosition(parent_id);
+            //    RD = R_parent - R;
 
-                //find angle between parent and link
-                float constrain = 0.5235987756;
-                float parent_dot = rd.normalized().dot(re.normalized()); //get dot 
+            //    //find angle between parent and link
+            //    float constrain = 30;
 
-                if (parent_dot > 1) parent_dot = 1;
-                if (parent_dot < -1) parent_dot = -1;
+            //    //get dot product
+            //    dot = RD.normalized().dot(RE.normalized());  
 
-                float parent_angle = acos(parent_dot);
-                cyls[curr_link]->RotateByDegree(-angle, rotation_vector); //rotate back 
+            //    //check that it is between -1 to 1
+            //    if (dot > 1) dot = 1;
+            //    if (dot < -1) dot = -1;
 
-                if (parent_angle < constrain) { //fix angle
-                    angle = angle - (constrain - parent_angle);
-                }
-            }
+            //    float parent_angle = (acos(dot) * (180.f / 3.14f)) / 100.f;
+            //    cyls[curr_link]->RotateByDegree(-angle, rotation_vector); //rotate back 
+
+
+            //    //if (parent_angle < constrain) { //fix angle
+            //    //    angle = angle - (constrain - parent_angle);
+            //    //}
+            //}
 
             cyls[curr_link]->RotateByDegree(angle, rotation_vector);
             curr_link = parent_id;
