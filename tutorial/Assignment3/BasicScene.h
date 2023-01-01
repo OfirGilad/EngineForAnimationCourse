@@ -25,6 +25,8 @@ public:
 
     void IKCyclicCoordinateDecentMethod();
     void fix_rotate();
+    void IKFabrik();
+    void IKSolverHelper(int id, Eigen::Vector3f t);
 
     // New Callback Functions
     void Space_Callback();
@@ -36,6 +38,7 @@ public:
     void Left_Callback();
     void Up_Callback();
     void Down_Callback();
+    void S_Callback();
 
 private:
     std::shared_ptr<Movable> root;
@@ -51,6 +54,8 @@ private:
     Eigen::MatrixXd V, C, N, T, points,edges,colors;
 
     // New Variables
+    int IK_mode = 0;
     bool animate_CCD = false;
+    bool animate_Fabrik = false;
     float delta = 0.05;
 };

@@ -152,6 +152,7 @@ void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, con
     cube->Rotate(0.1f, Axis::XYZ);
 
     IKCyclicCoordinateDecentMethod();
+    IKFabrik();
 }
 
 void BasicScene::MouseCallback(Viewport* viewport, int x, int y, int button, int action, int mods, int buttonState[])
@@ -365,7 +366,9 @@ void BasicScene::KeyCallback(Viewport* viewport, int x, int y, int key, int scan
             case GLFW_KEY_DOWN: // rotates picked link around the current X axis
                 Down_Callback();
                 break;
-            
+            case GLFW_KEY_S: // switch IK modes
+                S_Callback();
+                break;
         }
     }
 }
@@ -482,29 +485,28 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
             //the link has a parent
             //if (parent_id != -1) {
             //    cyls[curr_link]->RotateByDegree(angle, rotation_vector);
-
+            // 
             //    E = GetLinkTipPosition(last_link_id); //get new position after rotation
             //    RE = E - R;
             //    Eigen::Vector3f R_parent = GetLinkSourcePosition(parent_id);
             //    RD = R_parent - R;
-
+            // 
             //    //find angle between parent and link
             //    float constrain = 30;
-
+            // 
             //    //get dot product
             //    dot = RD.normalized().dot(RE.normalized());  
-
+            // 
             //    //check that it is between -1 to 1
             //    if (dot > 1) dot = 1;
             //    if (dot < -1) dot = -1;
-
-            //    float parent_angle = (acos(dot) * (180.f / 3.14f)) / 100.f;
+            // 
+            //    float parent_angle = (acos(dot) * (180.f / 3.14f));
             //    cyls[curr_link]->RotateByDegree(-angle, rotation_vector); //rotate back 
-
-
-            //    //if (parent_angle < constrain) { //fix angle
-            //    //    angle = angle - (constrain - parent_angle);
-            //    //}
+            // 
+            //    if (parent_angle < constrain) { //fix angle
+            //        angle = angle - (constrain - parent_angle);
+            //    }
             //}
 
             cyls[curr_link]->RotateByDegree(angle, rotation_vector);
@@ -534,14 +536,164 @@ void BasicScene::fix_rotate() {
     }
 }
 
+void BasicScene::IKFabrik() {
+    if (animate_Fabrik) {
+        int first_link_id = 0;
+        int last_link_id = 2;
+        int num_of_links = 3;
+        float link_length = 1.6f;
+
+        std::vector<Eigen::Vector3f> p; //joint positions
+        p.resize(num_of_links + 1);
+        Eigen::Vector3f t = GetDestinationPosition();
+        Eigen::Vector3f root = GetLinkSourcePosition(first_link_id);
+
+        //Set disjoint positions
+        //p1 is first disjoin
+        int curr = last_link_id;
+        while (curr != -1) {
+            p[curr] = GetLinkSourcePosition(curr);
+            curr = curr - 1;
+        }
+        p[last_link_id + 1] = GetLinkTipPosition(last_link_id);
+        std::vector<double> riArr;
+        std::vector<double> lambdaIArr;
+
+        riArr.resize(num_of_links + 1);
+        lambdaIArr.resize(num_of_links + 1);
+
+        if ((t - root).norm() > link_length * num_of_links) {
+            //1.5. The target is unreachable
+            std::cout << "cannot reach" << std::endl;
+            animate_Fabrik = false;
+            return;
+        }
+        else
+        {
+            //1.14. The target is reachable; thus set as b the initial position of joint p0
+            Eigen::Vector3f b = p[first_link_id];
+
+            //1.16. Check wether the distance between the end effector Pn and the target t is greater then a tolerance
+            Eigen::Vector3f endEffector = p[last_link_id + 1];
+            float tolerance = 0.1;
+
+            float diffA = (endEffector - t).norm();
+            if (diffA < tolerance) {
+                std::cout << "distance: " << diffA << std::endl;
+                animate_Fabrik = false;
+                return;
+            }
+            while (diffA > tolerance) {
+                //1.19. STAGE 1: FORWARD REACHING
+                p[last_link_id + 1] = t;
+                int parent = last_link_id;
+                int child = last_link_id + 1;
+                while (parent != -1) {
+                    //1.23. Find the distance ri between the new joint position pi+1 and the joint pi
+                    riArr[parent] = (p[child] - p[parent]).norm();
+                    lambdaIArr[parent] = link_length / riArr[parent];
+                    p[parent] = (1 - lambdaIArr[parent]) * p[child] + lambdaIArr[parent] * p[parent]; //1.27
+                    child = parent;
+                    parent = parent - 1;
+
+                }
+                //1.29. STAGE 2: BACKWORD REACHING
+
+                //1.30. Set the root p0 its initial position
+                p[first_link_id] = b;
+                parent = first_link_id;
+                child = first_link_id + 1;
+                while (child != num_of_links) {
+                    //1.33. Find the distance ri between the new joint position pi and the joint pi+1
+                    riArr[parent] = (p[child] - p[parent]).norm();
+                    lambdaIArr[parent] = link_length / riArr[parent];
+                    p[child] = (1 - lambdaIArr[parent]) * p[parent] + lambdaIArr[parent] * p[child]; //1.27
+                    parent = child;
+                    child = child + 1;
+                }
+
+                riArr[last_link_id] = (p[last_link_id + 1] - p[last_link_id]).norm();
+                lambdaIArr[last_link_id] = link_length / riArr[last_link_id];
+                p[last_link_id + 1] = (1 - lambdaIArr[last_link_id]) * p[last_link_id] + lambdaIArr[last_link_id] * p[last_link_id + 1]; //1.27
+                diffA = (p[last_link_id + 1] - t).norm();
+            }
+            //rotate
+            int currLink = first_link_id;
+            int target_id = first_link_id + 1;
+
+            while (target_id != num_of_links) {
+                IKSolverHelper(currLink, p[target_id]);
+                currLink = target_id;
+                target_id = target_id + 1;
+            }
+            IKSolverHelper(last_link_id, p[last_link_id + 1]);
+            float distance = (t - GetLinkTipPosition(last_link_id)).norm();
+
+            if (distance < tolerance) {
+                //fix_rotate();
+                animate_Fabrik = false;
+                std::cout << "distance: " << distance << std::endl;
+            }
+        }
+    }
+}
+
+void BasicScene::IKSolverHelper(int id, Eigen::Vector3f t) {
+    Eigen::Vector3f r = GetLinkSourcePosition(id);
+    Eigen::Vector3f e = GetLinkTipPosition(id);
+    Eigen::Vector3f rd = t - r;
+    Eigen::Vector3f re = e - r;
+    Eigen::Vector3f normal = re.normalized().cross(rd.normalized());
+    float dot = rd.normalized().dot(re.normalized());//get dot 
+
+    if (dot > 1) dot = 1;
+    if (dot < -1) dot = 1;
+    float angle = (acos(dot) * (180.f / 3.14f)) / 100.f;
+
+    Eigen::Vector3f rotationVec = cyls[id]->GetAggregatedTransform().block<3, 3>(0, 0).inverse() * normal;
+    int parent = id - 1;
+
+    //bonus
+    if (parent != -1) {
+        cyls[id]->RotateByDegree(angle, rotationVec);
+        e = GetLinkTipPosition(id); //get new position after rotation
+        re = e - r;
+        Eigen::Vector3f r_parent = GetLinkSourcePosition(parent);
+        rd = r_parent - r;
+        //find angle between parent and link
+        float constarin = 30;
+        float parentDot = rd.normalized().dot(re.normalized());//get dot
+
+        if (parentDot > 1) parentDot = 1;
+        if (parentDot < -1) parentDot = 1;
+
+        float parentAngle = (acos(parentDot) * (180.f / 3.14f));
+        cyls[id]->RotateByDegree(-angle, rotationVec); //rotate back
+        if (parentAngle < constarin) {//fix angle
+            angle = angle - (constarin - parentAngle);
+        }
+    }
+    cyls[id]->RotateByDegree(angle, rotationVec);
+}
+
 // New Callback Functions
 void BasicScene::Space_Callback()
 {
-    if (animate_CCD == false) {
-        animate_CCD = true;
+    if (IK_mode == 0) {
+        if (animate_CCD == false) {
+            animate_CCD = true;
+        }
+        else {
+            animate_CCD = false;
+        }
     }
     else {
-        animate_CCD = false;
+        if (animate_Fabrik == false) {
+            animate_Fabrik = true;
+        }
+        else {
+            animate_Fabrik = false;
+        }
     }
 }
 
@@ -712,5 +864,18 @@ void BasicScene::Down_Callback()
     }
     else {
         camera->TranslateInSystem(system, { 0, -0.1f, 0 });
+    }
+}
+
+void BasicScene::S_Callback()
+{
+    animate_CCD = false;
+    animate_Fabrik = false;
+
+    if (IK_mode == 0) {
+        IK_mode = 1;
+    }
+    else {
+        IK_mode = 0;
     }
 }
