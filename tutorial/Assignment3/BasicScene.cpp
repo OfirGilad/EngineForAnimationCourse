@@ -411,32 +411,6 @@ Eigen::Vector3f BasicScene::GetLinkSourcePosition(int link_id) {
     return arm_source_position;
 }
 
-// Calculates rotation matrix to euler angles
-// The result is the same as MATLAB except the order
-// of the euler angles (x and z are swapped).
-// https://learnopencv.com/rotation-matrix-to-euler-angles/
-Eigen::Vector3f BasicScene::RotationMatrixToEulerAngles(Eigen::Matrix3f R)
-{
-    float sy = sqrt(R.row(0).x() * R.row(0).x() + R.row(1).x() * R.row(1).x());
-
-    bool singular = sy < 1e-6; // If
-
-    float x, y, z;
-    if (!singular)
-    {
-        x = atan2(R.row(2).y(), R.row(2).z());
-        y = atan2(-R.row(2).x(), sy);
-        z = atan2(R.row(1).x(), R.row(0).x());
-    }
-    else
-    {
-        x = atan2(-R.row(1).z(), R.row(1).y());
-        y = atan2(-R.row(2).x(), sy);
-        z = 0;
-    }
-    return Eigen::Vector3f(x, y, z);
-}
-
 void BasicScene::IKCyclicCoordinateDecentMethod() {
     if (animate_CCD && animate) {
         int first_link_id = 0;
@@ -596,11 +570,7 @@ void BasicScene::IKFabrikMethod() {
                     p[child] = (1 - lambda_i_array[parent]) * p[parent] + lambda_i_array[parent] * p[child];
                     parent = child;
                     child = child + 1;
-                }
-                //ri_array[last_link_id] = (p[last_link_id + 1] - p[last_link_id]).norm();
-                //lambda_i_array[last_link_id] = link_length / ri_array[last_link_id];
-                //p[last_link_id + 1] = (1 - lambda_i_array[last_link_id]) * p[last_link_id] + lambda_i_array[last_link_id] * p[last_link_id + 1];
-                
+                }                
                 diff_A = (p[last_link_id + 1] - t).norm();
             }
 
@@ -613,7 +583,6 @@ void BasicScene::IKFabrikMethod() {
                 curr_link = target_id;
                 target_id = target_id + 1;
             }
-            //IKSolverHelper(last_link_id, p[last_link_id + 1]);
 
             float distance = (t - GetLinkTipPosition(last_link_id)).norm();
 
