@@ -793,7 +793,7 @@ void BasicScene::Right_Callback()
         pickedModel->RotateInSystem(system, 0.1f, Axis::X);
     }
     else {
-        camera->TranslateInSystem(system, { 0.1f, 0, 0 });
+        root->RotateInSystem(system, -0.1f, Axis::Y);
     }
 }
 
@@ -808,7 +808,7 @@ void BasicScene::Left_Callback()
         pickedModel->RotateInSystem(system, -0.1f, Axis::X);
     }
     else {
-        camera->TranslateInSystem(system, { -0.1f, 0, 0 });
+        root->RotateInSystem(system, 0.1f, Axis::Y);
     }
 }
 
@@ -823,7 +823,7 @@ void BasicScene::Up_Callback()
         pickedModel->RotateInSystem(system, 0.1f, Axis::Y);
     }
     else {
-        camera->TranslateInSystem(system, { 0, 0.1f, 0 });
+        root->RotateInSystem(system, -0.1f, Axis::X);
     }
 }
 
@@ -838,7 +838,7 @@ void BasicScene::Down_Callback()
         pickedModel->RotateInSystem(system, -0.1f, Axis::Y);
     }
     else {
-        camera->TranslateInSystem(system, { 0, -0.1f, 0 });
+        root->RotateInSystem(system, 0.1f, Axis::X);
     }
 }
 
