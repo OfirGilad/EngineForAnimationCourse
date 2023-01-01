@@ -246,13 +246,14 @@ void BasicScene::CursorPosCallback(Viewport* viewport, int x, int y, bool draggi
 
 
                 // Left mouse button will rotate objects or the scene in the same manner of the arrows
-                pickedModel->RotateInSystem(system, float(xAtPress - x) / angleCoeff, Axis::Y);
 
                 if (pickedModel == cyls[0]) {
-                    pickedModel->RotateInSystem(system, float(yAtPress - y) / angleCoeff, Axis::X);
+                    pickedModel->RotateInSystem(system, -float(xAtPress - x) / angleCoeff, Axis::Y);
+                    pickedModel->RotateInSystem(system, -float(yAtPress - y) / angleCoeff, Axis::X);
                 }
                 else {
-                    pickedModel->RotateInSystem(system, float(yAtPress - y) / angleCoeff, Axis::Z);
+                    pickedModel->RotateInSystem(system, -float(xAtPress - x) / angleCoeff, Axis::X);
+                    pickedModel->RotateInSystem(system, float(yAtPress - y) / angleCoeff, Axis::Y);
                 } 
             }
         } else {
@@ -811,10 +812,10 @@ void BasicScene::Right_Callback()
     auto system = camera->GetRotation().transpose();
 
     if (pickedModel == cyls[0]) {
-        pickedModel->RotateInSystem(system, -0.1f, Axis::Y);
+        pickedModel->RotateInSystem(system, 0.1f, Axis::Y);
     }
     else if ((pickedModel == cyls[1]) || (pickedModel == cyls[2])) {
-        pickedModel->RotateInSystem(system, -0.1f, Axis::Y);
+        pickedModel->RotateInSystem(system, 0.1f, Axis::X);
     }
     else {
         camera->TranslateInSystem(system, { 0.1f, 0, 0 });
@@ -826,10 +827,10 @@ void BasicScene::Left_Callback()
     auto system = camera->GetRotation().transpose();
 
     if (pickedModel == cyls[0]) {
-        pickedModel->RotateInSystem(system, 0.1f, Axis::Y);
+        pickedModel->RotateInSystem(system, -0.1f, Axis::Y);
     }
     else if ((pickedModel == cyls[1]) || (pickedModel == cyls[2])) {
-        pickedModel->RotateInSystem(system, 0.1f, Axis::Y);
+        pickedModel->RotateInSystem(system, -0.1f, Axis::X);
     }
     else {
         camera->TranslateInSystem(system, { -0.1f, 0, 0 });
@@ -841,10 +842,10 @@ void BasicScene::Up_Callback()
     auto system = camera->GetRotation().transpose();
 
     if (pickedModel == cyls[0]) {
-        pickedModel->RotateInSystem(system, 0.1f, Axis::X);
+        pickedModel->RotateInSystem(system, -0.1f, Axis::X);
     }
     else if ((pickedModel == cyls[1]) || (pickedModel == cyls[2])) {
-        pickedModel->RotateInSystem(system, 0.1f, Axis::Z);
+        pickedModel->RotateInSystem(system, 0.1f, Axis::Y);
     }
     else {
         camera->TranslateInSystem(system, { 0, 0.1f, 0 });
@@ -856,10 +857,10 @@ void BasicScene::Down_Callback()
     auto system = camera->GetRotation().transpose();
 
     if (pickedModel == cyls[0]) {
-        pickedModel->RotateInSystem(system, -0.1f, Axis::X);
+        pickedModel->RotateInSystem(system, 0.1f, Axis::X);
     }
     else if ((pickedModel == cyls[1]) || (pickedModel == cyls[2])) {
-        pickedModel->RotateInSystem(system, -0.1f, Axis::Z);
+        pickedModel->RotateInSystem(system, -0.1f, Axis::Y);
     }
     else {
         camera->TranslateInSystem(system, { 0, -0.1f, 0 });
