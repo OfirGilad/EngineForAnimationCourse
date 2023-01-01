@@ -680,7 +680,7 @@ void BasicScene::IKSolverHelper(int id, Eigen::Vector3f t) {
 void BasicScene::Space_Callback()
 {
     if (IK_mode == 0) {
-        if (animate_CCD == false) {
+        if (!animate_CCD) {
             animate_CCD = true;
         }
         else {
@@ -688,7 +688,7 @@ void BasicScene::Space_Callback()
         }
     }
     else {
-        if (animate_Fabrik == false) {
+        if (!animate_Fabrik) {
             animate_Fabrik = true;
         }
         else {
