@@ -152,7 +152,7 @@ void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, con
     cube->Rotate(0.1f, Axis::XYZ);
 
     IKCyclicCoordinateDecentMethod();
-    IKFabrik();
+    IKFabrikMethod();
 }
 
 void BasicScene::MouseCallback(Viewport* viewport, int x, int y, int button, int action, int mods, int buttonState[])
@@ -536,7 +536,7 @@ void BasicScene::fix_rotate() {
     }
 }
 
-void BasicScene::IKFabrik() {
+void BasicScene::IKFabrikMethod() {
     if (animate_Fabrik) {
         int first_link_id = 0;
         int last_link_id = 2;
@@ -575,15 +575,14 @@ void BasicScene::IKFabrik() {
 
             //1.16. Check wether the distance between the end effector Pn and the target t is greater then a tolerance
             Eigen::Vector3f endEffector = p[last_link_id + 1];
-            float tolerance = 0.1;
 
             float diffA = (endEffector - t).norm();
-            if (diffA < tolerance) {
+            if (diffA < delta) {
                 std::cout << "distance: " << diffA << std::endl;
                 animate_Fabrik = false;
                 return;
             }
-            while (diffA > tolerance) {
+            while (diffA > delta) {
                 //1.19. STAGE 1: FORWARD REACHING
                 p[last_link_id + 1] = t;
                 int parent = last_link_id;
@@ -629,7 +628,7 @@ void BasicScene::IKFabrik() {
             IKSolverHelper(last_link_id, p[last_link_id + 1]);
             float distance = (t - GetLinkTipPosition(last_link_id)).norm();
 
-            if (distance < tolerance) {
+            if (distance < delta) {
                 //fix_rotate();
                 animate_Fabrik = false;
                 std::cout << "distance: " << distance << std::endl;
@@ -872,10 +871,12 @@ void BasicScene::S_Callback()
     animate_CCD = false;
     animate_Fabrik = false;
 
-    if (IK_mode == 0) {
-        IK_mode = 1;
+    if (IK_mode == 1) {
+        std::cout << "IK mode: Cyclic Coordinate Decent Method" << std::endl;
+        IK_mode = 0;
     }
     else {
-        IK_mode = 0;
+        std::cout << "IK mode: Fabrik Method" << std::endl;
+        IK_mode = 1;
     }
 }

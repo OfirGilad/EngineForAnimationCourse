@@ -25,7 +25,7 @@ public:
 
     void IKCyclicCoordinateDecentMethod();
     void fix_rotate();
-    void IKFabrik();
+    void IKFabrikMethod();
     void IKSolverHelper(int id, Eigen::Vector3f t);
 
     // New Callback Functions
