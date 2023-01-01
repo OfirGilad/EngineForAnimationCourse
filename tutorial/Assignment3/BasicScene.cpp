@@ -74,15 +74,15 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     // axis[0]->lineWidth = 5;
     root->AddChild(axis[0]);
     float scaleFactor = 1; 
-    cyls.push_back( Model::Create("cyl",cylMesh, material));
+    cyls.push_back(Model::Create("cyl", cylMesh, material));
     cyls[0]->Scale(scaleFactor,Axis::X);
     cyls[0]->SetCenter(Eigen::Vector3f(0,0,-0.8f*scaleFactor));
-    cyls[0]->RotateByDegree(90, Eigen::Vector3f(0,1,0));
+    cyls[0]->RotateByDegree(90, Eigen::Vector3f(0,0,1));
     root->AddChild(cyls[0]);
    
     for(int i = 1; i < 3; i++)
     { 
-        cyls.push_back( Model::Create("cyl", cylMesh, material));
+        cyls.push_back(Model::Create("cyl", cylMesh, material));
         cyls[i]->Scale(scaleFactor,Axis::X);   
         cyls[i]->Translate(1.6f*scaleFactor,Axis::Z);
         cyls[i]->SetCenter(Eigen::Vector3f(0,0,-0.8f*scaleFactor));
