@@ -484,33 +484,6 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
             Eigen::Vector3f rotation_vector = cyls[curr_link]->GetAggregatedTransform().block<3, 3>(0, 0).inverse() * normal;
             int parent_id = curr_link - 1;
 
-            //the link has a parent
-            //if (parent_id != -1) {
-            //    cyls[curr_link]->RotateByDegree(angle, rotation_vector);
-            // 
-            //    E = GetLinkTipPosition(last_link_id); //get new position after rotation
-            //    RE = E - R;
-            //    Eigen::Vector3f R_parent = GetLinkSourcePosition(parent_id);
-            //    RD = R_parent - R;
-            // 
-            //    //find angle between parent and link
-            //    float constrain = 30;
-            // 
-            //    //get dot product
-            //    dot = RD.normalized().dot(RE.normalized());  
-            // 
-            //    //check that it is between -1 to 1
-            //    if (dot > 1) dot = 1;
-            //    if (dot < -1) dot = -1;
-            // 
-            //    float parent_angle = (acos(dot) * (180.f / 3.14f));
-            //    cyls[curr_link]->RotateByDegree(-angle, rotation_vector); //rotate back 
-            // 
-            //    if (parent_angle < constrain) { //fix angle
-            //        angle = angle - (constrain - parent_angle);
-            //    }
-            //}
-
             cyls[curr_link]->RotateByDegree(angle, rotation_vector);
             curr_link = parent_id;
         }
@@ -674,27 +647,6 @@ void BasicScene::IKSolverHelper(int link_id, Eigen::Vector3f D) {
     float angle = (acos(dot) * (180.f / 3.14f)) / angle_divider;
     Eigen::Vector3f rotation_vector = cyls[link_id]->GetAggregatedTransform().block<3, 3>(0, 0).inverse() * normal;
     int parent = link_id - 1;
-
-    //bonus
-    //if (parent != -1) {
-    //    cyls[id]->RotateByDegree(angle, rotation_vector);
-    //    e = GetLinkTipPosition(id); //get new position after rotation
-    //    re = e - r;
-    //    Eigen::Vector3f r_parent = GetLinkSourcePosition(parent);
-    //    rd = r_parent - r;
-    //    //find angle between parent and link
-    //    float constarin = 30;
-    //    float parentDot = rd.normalized().dot(re.normalized());//get dot
-
-    //    if (parentDot > 1) parentDot = 1;
-    //    if (parentDot < -1) parentDot = 1;
-
-    //    float parentAngle = (acos(parentDot) * (180.f / 3.14f));
-    //    cyls[id]->RotateByDegree(-angle, rotation_vector); //rotate back
-    //    if (parentAngle < constarin) {//fix angle
-    //        angle = angle - (constarin - parentAngle);
-    //    }
-    //}
 
     cyls[link_id]->RotateByDegree(angle, rotation_vector);
 }
