@@ -58,4 +58,5 @@ private:
     bool animate_CCD = false;
     bool animate_Fabrik = false;
     float delta = 0.05;
+    float angle_divider = 50.f;
 };

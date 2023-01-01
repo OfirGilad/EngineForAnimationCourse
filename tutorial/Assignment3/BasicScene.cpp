@@ -438,7 +438,7 @@ Eigen::Vector3f BasicScene::RotationMatrixToEulerAngles(Eigen::Matrix3f R)
 }
 
 void BasicScene::IKCyclicCoordinateDecentMethod() {
-    if (animate_CCD) {
+    if (animate_CCD && animate) {
         int first_link_id = 0;
         int last_link_id = 2;
         int num_of_links = 3;
@@ -480,7 +480,7 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
             if (dot > 1) dot = 1;
             if (dot < -1) dot = -1;
 
-            float angle = (acosf(dot) * (180.f / 3.14f)) / 100.f;
+            float angle = (acosf(dot) * (180.f / 3.14f)) / angle_divider;
             Eigen::Vector3f rotation_vector = cyls[curr_link]->GetAggregatedTransform().block<3, 3>(0, 0).inverse() * normal;
             int parent_id = curr_link - 1;
 
@@ -514,6 +514,7 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
             cyls[curr_link]->RotateByDegree(angle, rotation_vector);
             curr_link = parent_id;
         }
+        animate = false;
     }
 }
 
@@ -528,7 +529,7 @@ void BasicScene::fix_rotate() {
     while (curr_link != num_of_links) {
         Eigen::Matrix3f R = cyls[curr_link]->GetRotation();
         Eigen::Vector3f ea = R.eulerAngles(2, 0, 2);//get the rotation angles
-        float angleZ = ea[2];
+        float angleZ = ea[2] * (180.f / 3.14f);
         cyls[curr_link]->RotateByDegree(-angleZ, Z);
 
         curr_link = curr_link + 1;
@@ -539,7 +540,7 @@ void BasicScene::fix_rotate() {
 }
 
 void BasicScene::IKFabrikMethod() {
-    if (animate_Fabrik) {
+    if (animate_Fabrik && animate) {
         int first_link_id = 0;
         int last_link_id = 2;
         int num_of_links = 3;
@@ -650,6 +651,7 @@ void BasicScene::IKFabrikMethod() {
                 std::cout << "distance: " << distance << std::endl;
             }
         }
+        animate = false;
     }
 }
 
@@ -669,7 +671,7 @@ void BasicScene::IKSolverHelper(int link_id, Eigen::Vector3f D) {
     if (dot > 1) dot = 1;
     if (dot < -1) dot = 1;
 
-    float angle = (acos(dot) * (180.f / 3.14f)) / 100.f;
+    float angle = (acos(dot) * (180.f / 3.14f)) / angle_divider;
     Eigen::Vector3f rotation_vector = cyls[link_id]->GetAggregatedTransform().block<3, 3>(0, 0).inverse() * normal;
     int parent = link_id - 1;
 
