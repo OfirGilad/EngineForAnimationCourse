@@ -34,7 +34,7 @@ using namespace cg3d;
 
 void BasicScene::Init(float fov, int width, int height, float near, float far)
 {
-    camera = Camera::Create( "camera", fov, float(width) / height, near, far);
+    camera = Camera::Create("camera", fov, float(width) / height, near, far);
     
     AddChild(root = Movable::Create("root")); // a common (invisible) parent object for all the shapes
     auto daylight{std::make_shared<Material>("daylight", "shaders/cubemapShader")}; 
@@ -49,29 +49,29 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     auto program = std::make_shared<Program>("shaders/phongShader");
     auto program1 = std::make_shared<Program>("shaders/pickingShader");
     
-    auto material{ std::make_shared<Material>("material", program)}; // empty material
-    auto material1{ std::make_shared<Material>("material", program1)}; // empty material
-//    SetNamedObject(cube, Model::Create, Mesh::Cube(), material, shared_from_this());
+    auto material{std::make_shared<Material>("material", program)}; // empty material
+    auto material1{std::make_shared<Material>("material", program1)}; // empty material
+    //SetNamedObject(cube, Model::Create, Mesh::Cube(), material, shared_from_this());
  
     material->AddTexture(0, "textures/box0.bmp", 2);
     auto sphereMesh{IglLoader::MeshFromFiles("sphere_igl", "data/sphere.obj")};
     auto cylMesh{IglLoader::MeshFromFiles("cyl_igl","data/zcylinder.obj")};
     auto cubeMesh{IglLoader::MeshFromFiles("cube_igl","data/cube_old.obj")};
-    sphere1 = Model::Create( "sphere",sphereMesh, material);    
-    cube = Model::Create( "cube", cubeMesh, material);
+    sphere1 = Model::Create("sphere",sphereMesh, material);    
+    cube = Model::Create("cube", cubeMesh, material);
     
-    //Axis
+    // Axis
     Eigen::MatrixXd vertices(6,3);
     vertices << -1,0,0,1,0,0,0,-1,0,0,1,0,0,0,-1,0,0,1;
     Eigen::MatrixXi faces(3,2);
     faces << 0,1,2,3,4,5;
-    Eigen::MatrixXd vertexNormals = Eigen::MatrixXd::Ones(6,3);
-    Eigen::MatrixXd textureCoords = Eigen::MatrixXd::Ones(6,2);
-    std::shared_ptr<Mesh> coordsys = std::make_shared<Mesh>("coordsys",vertices,faces,vertexNormals,textureCoords);
-    axis.push_back(Model::Create("axis",coordsys,material1));
+    Eigen::MatrixXd vertexNormals = Eigen::MatrixXd::Ones(6, 3);
+    Eigen::MatrixXd textureCoords = Eigen::MatrixXd::Ones(6, 2);
+    std::shared_ptr<Mesh> coordsys = std::make_shared<Mesh>("coordsys", vertices, faces, vertexNormals, textureCoords);
+    axis.push_back(Model::Create("axis", coordsys, material1));
     axis[0]->mode = 1;   
     axis[0]->Scale(4,Axis::XYZ);
-    // axis[0]->lineWidth = 5;
+    //axis[0]->lineWidth = 5;
     root->AddChild(axis[0]);
     float scaleFactor = 1; 
     cyls.push_back(Model::Create("cyl", cylMesh, material));
@@ -88,17 +88,17 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
         cyls[i]->SetCenter(Eigen::Vector3f(0,0,-0.8f*scaleFactor));
         cyls[i-1]->AddChild(cyls[i]);
 
-        //Axis
+        // Axis
         axis.push_back(Model::Create("axis", coordsys, material1));
         axis[i]->mode = 1;
         axis[i]->Scale(4, Axis::XYZ);
         cyls[i-1]->AddChild(axis[i]);
-        axis[i]->Translate(0.8f* scaleFactor,Axis::Z);
+        axis[i]->Translate(0.8f*scaleFactor, Axis::Z);
     }
     cyls[0]->Translate({0,0,0.8f*scaleFactor});
 
     auto morphFunc = [](Model* model, cg3d::Visitor* visitor) {
-      return model->meshIndex;//(model->GetMeshList())[0]->data.size()-1;
+      return model->meshIndex; //(model->GetMeshList())[0]->data.size()-1;
     };
     autoCube = AutoMorphingModel::Create(*cube, morphFunc);
 
@@ -111,24 +111,24 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     autoCube->showWireframe = true;
     camera->Translate(22, Axis::Z);
     root->AddChild(sphere1);
-//    root->AddChild(cyl);
+    //root->AddChild(cyl);
     root->AddChild(autoCube);
-    // points = Eigen::MatrixXd::Ones(1,3);
-    // edges = Eigen::MatrixXd::Ones(1,3);
-    // colors = Eigen::MatrixXd::Ones(1,3);
+    //points = Eigen::MatrixXd::Ones(1,3);
+    //edges = Eigen::MatrixXd::Ones(1,3);
+    //colors = Eigen::MatrixXd::Ones(1,3);
     
-    // cyl->AddOverlay({points,edges,colors},true);
+    //cyl->AddOverlay({points,edges,colors},true);
     cube->mode =1   ; 
     auto mesh = cube->GetMeshList();
 
     //autoCube->AddOverlay(points,edges,colors);
-    // mesh[0]->data.push_back({V,F,V,E});
+    //mesh[0]->data.push_back({V,F,V,E});
     int num_collapsed;
 
-  // Function to reset original mesh and data structures
+    // Function to reset original mesh and data structures
     V = mesh[0]->data[0].vertices;
     F = mesh[0]->data[0].faces;
-   // igl::read_triangle_mesh("data/cube.off",V,F);
+    //igl::read_triangle_mesh("data/cube.off",V,F);
     igl::edge_flaps(F,E,EMAP,EF,EI);
     std::cout<< "vertices: \n" << V <<std::endl;
     std::cout<< "faces: \n" << F <<std::endl;
@@ -148,7 +148,7 @@ void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, con
     program.SetUniform4f("Kdi", 0.5f, 0.5f, 0.0f, 1.0f);
     program.SetUniform1f("specular_exponent", 5.0f);
     program.SetUniform4f("light_position", 0.0, 15.0f, 0.0, 1.0f);
-//    cyl->Rotate(0.001f, Axis::Y);
+    //cyl->Rotate(0.001f, Axis::Y);
     cube->Rotate(0.1f, Axis::XYZ);
 
     IKCyclicCoordinateDecentMethod();
@@ -171,11 +171,11 @@ void BasicScene::MouseCallback(Viewport* viewport, int x, int y, int button, int
         xAtPress = x;
         yAtPress = y;
 
-        // if (pickedModel)
-        //     debug("found ", pickedModel->isPickable ? "pickable" : "non-pickable", " model at pos ", x, ", ", y, ": ",
-        //           pickedModel->name, ", depth: ", pickedModelDepth);
-        // else
-        //     debug("found nothing at pos ", x, ", ", y);
+        //if (pickedModel)
+        //    debug("found ", pickedModel->isPickable ? "pickable" : "non-pickable", " model at pos ", x, ", ", y, ": ",
+        //          pickedModel->name, ", depth: ", pickedModelDepth);
+        //else
+        //    debug("found nothing at pos ", x, ", ", y);
 
         if (pickedModel && !pickedModel->isPickable)
             pickedModel = nullptr; // for non-pickable models we need only pickedModelDepth for mouse movement calculations later
@@ -256,7 +256,7 @@ void BasicScene::CursorPosCallback(Viewport* viewport, int x, int y, bool draggi
                 } 
             }
         } else {
-           // camera->SetTout(cameraToutAtPress);
+           //camera->SetTout(cameraToutAtPress);
             if (buttonState[GLFW_MOUSE_BUTTON_RIGHT] != GLFW_RELEASE)
                 root->TranslateInSystem(system, {-float(xAtPress - x) / moveCoeff/10.0f, float( yAtPress - y) / moveCoeff/10.0f, 0});
             if (buttonState[GLFW_MOUSE_BUTTON_MIDDLE] != GLFW_RELEASE)
@@ -342,31 +342,31 @@ void BasicScene::KeyCallback(Viewport* viewport, int x, int y, int key, int scan
             case GLFW_KEY_SPACE: // IK solver
                 Space_Callback();
                 break;
-            case GLFW_KEY_P: // prints rotation matrices
+            case GLFW_KEY_P: // Prints rotation matrices
                 P_Callback();
                 break;
-            case GLFW_KEY_T: // prints arms tip positions
+            case GLFW_KEY_T: // Prints arms tip positions
                 T_Callback();
                 break;
-            case GLFW_KEY_D: // prints destination position
+            case GLFW_KEY_D: // Prints destination position
                 D_Callback();
                 break;
-            case GLFW_KEY_N: // pick the next link, or the first one in case the last link is picked
+            case GLFW_KEY_N: // Pick the next link, or the first one in case the last link is picked
                 N_Callback();
                 break;
-            case GLFW_KEY_RIGHT: // rotates picked link around the previous link Y axis
+            case GLFW_KEY_RIGHT: // Rotates picked link around the previous link Y axis
                 Right_Callback();
                 break;
-            case GLFW_KEY_LEFT: // rotates picked link around the previous link Y axis
+            case GLFW_KEY_LEFT: // Rotates picked link around the previous link Y axis
                 Left_Callback();
                 break;
-            case GLFW_KEY_UP: // rotates picked link around the current X axis
+            case GLFW_KEY_UP: // Rotates picked link around the current X axis
                 Up_Callback();
                 break;
-            case GLFW_KEY_DOWN: // rotates picked link around the current X axis
+            case GLFW_KEY_DOWN: // Rotates picked link around the current X axis
                 Down_Callback();
                 break;
-            case GLFW_KEY_S: // switch IK modes
+            case GLFW_KEY_S: // Switch IK modes
                 S_Callback();
                 break;
         }
@@ -460,7 +460,6 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
             Eigen::Vector3f E = GetLinkTipPosition(last_link_id);
             Eigen::Vector3f RD = D - R;
             Eigen::Vector3f RE = E - R;
-
             float distance = (D - E).norm();
 
             if (distance < delta) {
@@ -470,22 +469,22 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
                 return;
             }
 
-            //the plane normal
+            // The plane normal
             Eigen::Vector3f normal = RE.normalized().cross(RD.normalized()); 
 
-            //get dot product
+            // Get dot product
             float dot = RD.normalized().dot(RE.normalized());
 
-            //check that it is between -1 to 1
+            // Check that it is between -1 to 1
             if (dot > 1) dot = 1;
             if (dot < -1) dot = -1;
 
+            // Rotate link
             float angle = (acosf(dot) * (180.f / 3.14f)) / angle_divider;
             Eigen::Vector3f rotation_vector = cyls[curr_link]->GetAggregatedTransform().block<3, 3>(0, 0).inverse() * normal;
-            int parent_id = curr_link - 1;
-
             cyls[curr_link]->RotateByDegree(angle, rotation_vector);
-            curr_link = parent_id;
+
+            curr_link--;
         }
         animate = false;
     }
@@ -519,7 +518,7 @@ void BasicScene::IKFabrikMethod() {
         int num_of_links = 3;
         float link_length = 1.6f;
 
-        //The joint positions
+        // The joint positions
         std::vector<Eigen::Vector3f> p; 
         p.resize(num_of_links + 1);
 
@@ -529,7 +528,7 @@ void BasicScene::IKFabrikMethod() {
         // The root position
         Eigen::Vector3f root = GetLinkSourcePosition(first_link_id);
 
-        //Set disjoint positions (p_0 the is first disjoin)
+        // Set disjoint positions (p_0 the is first disjoin)
         int curr = first_link_id;
         while (curr != num_of_links) {
             p[curr] = GetLinkSourcePosition(curr);
@@ -543,21 +542,21 @@ void BasicScene::IKFabrikMethod() {
         ri_array.resize(num_of_links + 1);
         lambda_i_array.resize(num_of_links + 1);
 
-        //1.1. % The distance between root and target 
+        // 1.1. % The distance between root and target 
         float dist = (root - t).norm();
 
-        //1.3. % Check whether the target is within reach
+        // 1.3. % Check whether the target is within reach
         if (dist > link_length * num_of_links) {
-            //1.5. % The target is unreachable
+            // 1.5. % The target is unreachable
             std::cout << "cannot reach" << std::endl;
             animate_Fabrik = false;
             return;
         }
         else {
-            //1.14. % The target is reachable; thus set as b the initial position of joint p_0
+            // 1.14. % The target is reachable; thus set as b the initial position of joint p_0
             Eigen::Vector3f b = p[first_link_id];
 
-            //1.16. % Check wether the distance between the end effector p_n and the target t is greater then a tolerance
+            // 1.16. % Check wether the distance between the end effector p_n and the target t is greater then a tolerance
             Eigen::Vector3f endEffector = p[last_link_id + 1];
             float diff_A = (endEffector - t).norm();
             float tol = delta;
@@ -568,23 +567,23 @@ void BasicScene::IKFabrikMethod() {
                 return;
             }
             while (diff_A > tol) {
-                //1.19. % STAGE 1: FORWARD REACHING
-                //1.20. % Set the end effector p_n as target t
+                // 1.19. % STAGE 1: FORWARD REACHING
+                // 1.20. % Set the end effector p_n as target t
                 p[last_link_id + 1] = t;
                 int parent = last_link_id;
                 int child = last_link_id + 1;
 
                 while (parent != -1) {
-                    //1.23. % Find the distance r_i between the new joint position p_i+1 and the joint p_i
+                    // 1.23. % Find the distance r_i between the new joint position p_i+1 and the joint p_i
                     ri_array[parent] = (p[child] - p[parent]).norm();
                     lambda_i_array[parent] = link_length / ri_array[parent];
-                    //1.26. % Find the new joint positions p_i.
+                    // 1.26. % Find the new joint positions p_i.
                     p[parent] = (1 - lambda_i_array[parent]) * p[child] + lambda_i_array[parent] * p[parent];
                     child = parent;
                     parent = parent - 1;
                 }
-                //1.29. % STAGE 2: BACKWORD REACHING
-                //1.30. % Set the root p0 its initial position
+                // 1.29. % STAGE 2: BACKWORD REACHING
+                // 1.30. % Set the root p0 its initial position
                 p[first_link_id] = b;
                 parent = first_link_id;
                 child = first_link_id + 1;
@@ -605,7 +604,7 @@ void BasicScene::IKFabrikMethod() {
                 diff_A = (p[last_link_id + 1] - t).norm();
             }
 
-            //Using Fabrik output to rotate the links
+            // Using Fabrik output to rotate the links
             int curr_link = first_link_id;
             int target_id = first_link_id + 1;
 
@@ -634,20 +633,19 @@ void BasicScene::IKSolverHelper(int link_id, Eigen::Vector3f D) {
     Eigen::Vector3f RD = D - R;
     Eigen::Vector3f RE = E - R;
 
-    //the plane normal
+    // The plane normal
     Eigen::Vector3f normal = RE.normalized().cross(RD.normalized());
 
-    //get dot product
+    // Get dot product
     float dot = RD.normalized().dot(RE.normalized()); 
 
-    //check that it is between -1 to 1
+    // Check that it is between -1 to 1
     if (dot > 1) dot = 1;
     if (dot < -1) dot = 1;
 
+    // Rotate link
     float angle = (acos(dot) * (180.f / 3.14f)) / angle_divider;
     Eigen::Vector3f rotation_vector = cyls[link_id]->GetAggregatedTransform().block<3, 3>(0, 0).inverse() * normal;
-    int parent = link_id - 1;
-
     cyls[link_id]->RotateByDegree(angle, rotation_vector);
 }
 
