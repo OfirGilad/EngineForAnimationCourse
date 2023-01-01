@@ -707,7 +707,7 @@ void BasicScene::P_Callback()
             << "(" << arm1_rotation.row(1).x() << "," << arm1_rotation.row(1).y() << "," << arm1_rotation.row(1).z() << ")" << std::endl
             << "(" << arm1_rotation.row(2).x() << "," << arm1_rotation.row(2).y() << "," << arm1_rotation.row(2).z() << ")" << std::endl;
 
-        Eigen::Vector3f arm1_euler_angles = arm1_rotation.eulerAngles(2, 0, 2);
+        Eigen::Vector3f arm1_euler_angles = arm1_rotation.eulerAngles(2, 0, 2) * (180.f / 3.14f);
 
         std::cout << "Arm1 Euler Angles: "
             << "(" << arm1_euler_angles.x()
@@ -723,7 +723,7 @@ void BasicScene::P_Callback()
             << "(" << arm2_rotation.row(1).x() << "," << arm2_rotation.row(1).y() << "," << arm2_rotation.row(1).z() << ")" << std::endl
             << "(" << arm2_rotation.row(2).x() << "," << arm2_rotation.row(2).y() << "," << arm2_rotation.row(2).z() << ")" << std::endl;
 
-        Eigen::Vector3f arm2_euler_angles = arm2_rotation.eulerAngles(2, 0, 2);
+        Eigen::Vector3f arm2_euler_angles = arm2_rotation.eulerAngles(2, 0, 2) * (180.f / 3.14f);
 
         std::cout << "Arm2 Euler Angles: "
             << "(" << arm2_euler_angles.x()
@@ -739,7 +739,7 @@ void BasicScene::P_Callback()
             << "(" << arm3_rotation.row(1).x() << "," << arm3_rotation.row(1).y() << "," << arm3_rotation.row(1).z() << ")" << std::endl
             << "(" << arm3_rotation.row(2).x() << "," << arm3_rotation.row(2).y() << "," << arm3_rotation.row(2).z() << ")" << std::endl;
 
-        Eigen::Vector3f arm3_euler_angles = arm3_rotation.eulerAngles(2, 0, 2);
+        Eigen::Vector3f arm3_euler_angles = arm3_rotation.eulerAngles(2, 0, 2) * (180.f / 3.14f);
 
         std::cout << "Arm3 Euler Angles: "
             << "(" << arm3_euler_angles.x()
