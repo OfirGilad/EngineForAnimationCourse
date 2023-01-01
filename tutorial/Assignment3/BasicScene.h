@@ -49,7 +49,7 @@ private:
     Eigen::VectorXi EMAP;
     Eigen::MatrixXi F,E,EF,EI;
     Eigen::VectorXi EQ;
-  // If an edge were collapsed, we'd collapse it to these points:
+    // If an edge were collapsed, we'd collapse it to these points:
     Eigen::MatrixXd V, C, N, T, points,edges,colors;
 
     // New Variables
