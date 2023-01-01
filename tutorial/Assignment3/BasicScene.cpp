@@ -246,7 +246,6 @@ void BasicScene::CursorPosCallback(Viewport* viewport, int x, int y, bool draggi
 
 
                 // Left mouse button will rotate objects or the scene in the same manner of the arrows
-
                 if (pickedModel == cyls[0]) {
                     pickedModel->RotateInSystem(system, -float(xAtPress - x) / angleCoeff, Axis::Y);
                     pickedModel->RotateInSystem(system, -float(yAtPress - y) / angleCoeff, Axis::X);
