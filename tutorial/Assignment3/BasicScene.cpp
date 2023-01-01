@@ -460,7 +460,7 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
             Eigen::Vector3f E = GetLinkTipPosition(last_link_id);
             Eigen::Vector3f RD = D - R;
             Eigen::Vector3f RE = E - R;
-            Eigen::Vector3f normal = RE.normalized().cross(RD.normalized()); //returns the plane normal
+
             float distance = (D - E).norm();
 
             if (distance < delta) {
@@ -470,6 +470,9 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
                 return;
             }
 
+            //the plane normal
+            Eigen::Vector3f normal = RE.normalized().cross(RD.normalized()); 
+
             //get dot product
             float dot = RD.normalized().dot(RE.normalized());
 
@@ -478,9 +481,8 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
             if (dot < -1) dot = -1;
 
             float angle = (acosf(dot) * (180.f / 3.14f)) / 100.f;
-            int parent_id = curr_link - 1;
-
             Eigen::Vector3f rotation_vector = cyls[curr_link]->GetAggregatedTransform().block<3, 3>(0, 0).inverse() * normal;
+            int parent_id = curr_link - 1;
 
             //the link has a parent
             //if (parent_id != -1) {
@@ -543,89 +545,103 @@ void BasicScene::IKFabrikMethod() {
         int num_of_links = 3;
         float link_length = 1.6f;
 
-        std::vector<Eigen::Vector3f> p; //joint positions
+        //The joint positions
+        std::vector<Eigen::Vector3f> p; 
         p.resize(num_of_links + 1);
+
+        // The target position
         Eigen::Vector3f t = GetDestinationPosition();
+
+        // The root position
         Eigen::Vector3f root = GetLinkSourcePosition(first_link_id);
 
-        //Set disjoint positions
-        //p1 is first disjoin
-        int curr = last_link_id;
-        while (curr != -1) {
+        //Set disjoint positions (p_0 the is first disjoin)
+        int curr = first_link_id;
+        while (curr != num_of_links) {
             p[curr] = GetLinkSourcePosition(curr);
-            curr = curr - 1;
+            curr = curr + 1;
         }
         p[last_link_id + 1] = GetLinkTipPosition(last_link_id);
-        std::vector<double> riArr;
-        std::vector<double> lambdaIArr;
 
-        riArr.resize(num_of_links + 1);
-        lambdaIArr.resize(num_of_links + 1);
+        std::vector<double> ri_array;
+        std::vector<double> lambda_i_array;
 
-        if ((t - root).norm() > link_length * num_of_links) {
-            //1.5. The target is unreachable
+        ri_array.resize(num_of_links + 1);
+        lambda_i_array.resize(num_of_links + 1);
+
+        //1.1. % The distance between root and target 
+        float dist = (root - t).norm();
+
+        //1.3. % Check whether the target is within reach
+        if (dist > link_length * num_of_links) {
+            //1.5. % The target is unreachable
             std::cout << "cannot reach" << std::endl;
             animate_Fabrik = false;
             return;
         }
-        else
-        {
-            //1.14. The target is reachable; thus set as b the initial position of joint p0
+        else {
+            //1.14. % The target is reachable; thus set as b the initial position of joint p_0
             Eigen::Vector3f b = p[first_link_id];
 
-            //1.16. Check wether the distance between the end effector Pn and the target t is greater then a tolerance
+            //1.16. % Check wether the distance between the end effector p_n and the target t is greater then a tolerance
             Eigen::Vector3f endEffector = p[last_link_id + 1];
+            float diff_A = (endEffector - t).norm();
+            float tol = delta;
 
-            float diffA = (endEffector - t).norm();
-            if (diffA < delta) {
-                std::cout << "distance: " << diffA << std::endl;
+            if (diff_A < tol) {
+                std::cout << "distance: " << diff_A << std::endl;
                 animate_Fabrik = false;
                 return;
             }
-            while (diffA > delta) {
-                //1.19. STAGE 1: FORWARD REACHING
+            while (diff_A > tol) {
+                //1.19. % STAGE 1: FORWARD REACHING
+                //1.20. % Set the end effector p_n as target t
                 p[last_link_id + 1] = t;
                 int parent = last_link_id;
                 int child = last_link_id + 1;
+
                 while (parent != -1) {
-                    //1.23. Find the distance ri between the new joint position pi+1 and the joint pi
-                    riArr[parent] = (p[child] - p[parent]).norm();
-                    lambdaIArr[parent] = link_length / riArr[parent];
-                    p[parent] = (1 - lambdaIArr[parent]) * p[child] + lambdaIArr[parent] * p[parent]; //1.27
+                    //1.23. % Find the distance r_i between the new joint position p_i+1 and the joint p_i
+                    ri_array[parent] = (p[child] - p[parent]).norm();
+                    lambda_i_array[parent] = link_length / ri_array[parent];
+                    //1.26. % Find the new joint positions p_i.
+                    p[parent] = (1 - lambda_i_array[parent]) * p[child] + lambda_i_array[parent] * p[parent];
                     child = parent;
                     parent = parent - 1;
-
                 }
-                //1.29. STAGE 2: BACKWORD REACHING
-
-                //1.30. Set the root p0 its initial position
+                //1.29. % STAGE 2: BACKWORD REACHING
+                //1.30. % Set the root p0 its initial position
                 p[first_link_id] = b;
                 parent = first_link_id;
                 child = first_link_id + 1;
+
                 while (child != num_of_links) {
-                    //1.33. Find the distance ri between the new joint position pi and the joint pi+1
-                    riArr[parent] = (p[child] - p[parent]).norm();
-                    lambdaIArr[parent] = link_length / riArr[parent];
-                    p[child] = (1 - lambdaIArr[parent]) * p[parent] + lambdaIArr[parent] * p[child]; //1.27
+                    //1.33. % Find the distance r_i between the new joint position p_i and the joint p_i+1
+                    ri_array[parent] = (p[child] - p[parent]).norm();
+                    lambda_i_array[parent] = link_length / ri_array[parent];
+                    //1.36 % Find the new joint positions p_i.
+                    p[child] = (1 - lambda_i_array[parent]) * p[parent] + lambda_i_array[parent] * p[child];
                     parent = child;
                     child = child + 1;
                 }
-
-                riArr[last_link_id] = (p[last_link_id + 1] - p[last_link_id]).norm();
-                lambdaIArr[last_link_id] = link_length / riArr[last_link_id];
-                p[last_link_id + 1] = (1 - lambdaIArr[last_link_id]) * p[last_link_id] + lambdaIArr[last_link_id] * p[last_link_id + 1]; //1.27
-                diffA = (p[last_link_id + 1] - t).norm();
+                //ri_array[last_link_id] = (p[last_link_id + 1] - p[last_link_id]).norm();
+                //lambda_i_array[last_link_id] = link_length / ri_array[last_link_id];
+                //p[last_link_id + 1] = (1 - lambda_i_array[last_link_id]) * p[last_link_id] + lambda_i_array[last_link_id] * p[last_link_id + 1];
+                
+                diff_A = (p[last_link_id + 1] - t).norm();
             }
-            //rotate
-            int currLink = first_link_id;
+
+            //Using Fabrik output to rotate the links
+            int curr_link = first_link_id;
             int target_id = first_link_id + 1;
 
-            while (target_id != num_of_links) {
-                IKSolverHelper(currLink, p[target_id]);
-                currLink = target_id;
+            while (curr_link != num_of_links) {
+                IKSolverHelper(curr_link, p[target_id]);
+                curr_link = target_id;
                 target_id = target_id + 1;
             }
-            IKSolverHelper(last_link_id, p[last_link_id + 1]);
+            //IKSolverHelper(last_link_id, p[last_link_id + 1]);
+
             float distance = (t - GetLinkTipPosition(last_link_id)).norm();
 
             if (distance < delta) {
@@ -637,42 +653,48 @@ void BasicScene::IKFabrikMethod() {
     }
 }
 
-void BasicScene::IKSolverHelper(int id, Eigen::Vector3f t) {
-    Eigen::Vector3f r = GetLinkSourcePosition(id);
-    Eigen::Vector3f e = GetLinkTipPosition(id);
-    Eigen::Vector3f rd = t - r;
-    Eigen::Vector3f re = e - r;
-    Eigen::Vector3f normal = re.normalized().cross(rd.normalized());
-    float dot = rd.normalized().dot(re.normalized());//get dot 
+void BasicScene::IKSolverHelper(int link_id, Eigen::Vector3f D) {
+    Eigen::Vector3f R = GetLinkSourcePosition(link_id);
+    Eigen::Vector3f E = GetLinkTipPosition(link_id);
+    Eigen::Vector3f RD = D - R;
+    Eigen::Vector3f RE = E - R;
 
+    //the plane normal
+    Eigen::Vector3f normal = RE.normalized().cross(RD.normalized());
+
+    //get dot product
+    float dot = RD.normalized().dot(RE.normalized()); 
+
+    //check that it is between -1 to 1
     if (dot > 1) dot = 1;
     if (dot < -1) dot = 1;
-    float angle = (acos(dot) * (180.f / 3.14f)) / 100.f;
 
-    Eigen::Vector3f rotationVec = cyls[id]->GetAggregatedTransform().block<3, 3>(0, 0).inverse() * normal;
-    int parent = id - 1;
+    float angle = (acos(dot) * (180.f / 3.14f)) / 100.f;
+    Eigen::Vector3f rotation_vector = cyls[link_id]->GetAggregatedTransform().block<3, 3>(0, 0).inverse() * normal;
+    int parent = link_id - 1;
 
     //bonus
-    if (parent != -1) {
-        cyls[id]->RotateByDegree(angle, rotationVec);
-        e = GetLinkTipPosition(id); //get new position after rotation
-        re = e - r;
-        Eigen::Vector3f r_parent = GetLinkSourcePosition(parent);
-        rd = r_parent - r;
-        //find angle between parent and link
-        float constarin = 30;
-        float parentDot = rd.normalized().dot(re.normalized());//get dot
+    //if (parent != -1) {
+    //    cyls[id]->RotateByDegree(angle, rotation_vector);
+    //    e = GetLinkTipPosition(id); //get new position after rotation
+    //    re = e - r;
+    //    Eigen::Vector3f r_parent = GetLinkSourcePosition(parent);
+    //    rd = r_parent - r;
+    //    //find angle between parent and link
+    //    float constarin = 30;
+    //    float parentDot = rd.normalized().dot(re.normalized());//get dot
 
-        if (parentDot > 1) parentDot = 1;
-        if (parentDot < -1) parentDot = 1;
+    //    if (parentDot > 1) parentDot = 1;
+    //    if (parentDot < -1) parentDot = 1;
 
-        float parentAngle = (acos(parentDot) * (180.f / 3.14f));
-        cyls[id]->RotateByDegree(-angle, rotationVec); //rotate back
-        if (parentAngle < constarin) {//fix angle
-            angle = angle - (constarin - parentAngle);
-        }
-    }
-    cyls[id]->RotateByDegree(angle, rotationVec);
+    //    float parentAngle = (acos(parentDot) * (180.f / 3.14f));
+    //    cyls[id]->RotateByDegree(-angle, rotation_vector); //rotate back
+    //    if (parentAngle < constarin) {//fix angle
+    //        angle = angle - (constarin - parentAngle);
+    //    }
+    //}
+
+    cyls[link_id]->RotateByDegree(angle, rotation_vector);
 }
 
 // New Callback Functions
