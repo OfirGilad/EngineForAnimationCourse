@@ -77,7 +77,6 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     cyls.push_back(Model::Create("cyl", cylMesh, material));
     cyls[0]->Scale(scaleFactor,Axis::X);
     cyls[0]->SetCenter(Eigen::Vector3f(0,0,-0.8f*scaleFactor));
-    cyls[0]->RotateByDegree(90, Eigen::Vector3f(0,0,1));
     root->AddChild(cyls[0]);
 
     for(int i = 1; i < 3; i++)
@@ -202,12 +201,17 @@ void BasicScene::ScrollCallback(Viewport* viewport, int x, int y, int xoffset, i
         // Change ScrollCallback callback to translate the picked object away and to the
         // camera(perpendicular to camera plane).When no object is picked translate the
         // whole scene.
-        if ((pickedModel == cyls[1]) || (pickedModel == cyls[2])) {
-            cyls[0]->TranslateInSystem(system, {0, 0, -float(yoffset)});
-            pickedToutAtPress = pickedModel->GetTout();
+        bool arm_selected = false;
+        for (int i = 0; i < num_of_links && !arm_selected; i++) {
+            if (pickedModel == cyls[i]) {
+                cyls[0]->TranslateInSystem(system * cyls[0]->GetRotation(), { 0, 0, -float(yoffset) });
+                pickedToutAtPress = pickedModel->GetTout();
+                arm_selected = true;
+            }
         }
-        else {
-            pickedModel->TranslateInSystem(system, { 0, 0, -float(yoffset) });
+        // None of the arms were selected
+        if (!arm_selected) {
+            pickedModel->TranslateInSystem(system * pickedModel->GetRotation(), { 0, 0, -float(yoffset) });
             pickedToutAtPress = pickedModel->GetTout();
         }
     } else {
@@ -231,12 +235,16 @@ void BasicScene::CursorPosCallback(Viewport* viewport, int x, int y, bool draggi
                 // When one link of the arm is picked and being translated move all the arm
                 // accordingly.The arm must not break!
                 // Right mouse button will translate the whole scene or the picked object.
-                if ((pickedModel == cyls[1]) || (pickedModel == cyls[2])) {
-                    //pickedModel->TranslateInSystem(system * pickedModel->GetRotation(), { -float(xAtPress - x) / moveCoeff, float(yAtPress - y) / moveCoeff, 0 });
-                    cyls[0]->TranslateInSystem(system, { -float(xAtPress - x) / moveCoeff, float(yAtPress - y) / moveCoeff, 0 });
+                bool arm_selected = false;
+                for (int i = 0; i < num_of_links && !arm_selected; i++) {
+                    if (pickedModel == cyls[i]) {
+                        cyls[0]->TranslateInSystem(system * cyls[0]->GetRotation(), { -float(xAtPress - x) / moveCoeff, float(yAtPress - y) / moveCoeff, 0 });
+                        arm_selected = true;
+                    }
                 }
-                else {
-                    pickedModel->TranslateInSystem(system, { -float(xAtPress - x) / moveCoeff, float(yAtPress - y) / moveCoeff, 0 });
+                // None of the arms were selected
+                if (!arm_selected) {
+                    pickedModel->TranslateInSystem(system * pickedModel->GetRotation(), { -float(xAtPress - x) / moveCoeff, float(yAtPress - y) / moveCoeff, 0 });
                 }
             }
             if (buttonState[GLFW_MOUSE_BUTTON_MIDDLE] != GLFW_RELEASE)
@@ -246,6 +254,7 @@ void BasicScene::CursorPosCallback(Viewport* viewport, int x, int y, bool draggi
                 //pickedModel->RotateInSystem(system, float(yAtPress - y) / angleCoeff, Axis::X);
 
 
+                // IN PROGRESS
                 // Left mouse button will rotate objects or the scene in the same manner of the arrows
                 if (pickedModel == cyls[0]) {
                     pickedModel->RotateInSystem(system, -float(xAtPress - x) / angleCoeff, Axis::Y);
@@ -645,89 +654,49 @@ void BasicScene::Space_Callback()
     }
 }
 
+// IN PROGRESS
 void BasicScene::P_Callback()
 {
-    if (pickedModel == cyls[0]) {
-        Eigen::Matrix3f arm1_rotation = pickedModel->GetRotation();
+    for (int i = 0; i < num_of_links; i++) {
+        if (pickedModel == cyls[i]) {
+            Eigen::Matrix3f arm_rotation = pickedModel->GetRotation();
 
-        std::cout << "Arm1 Rotation: " << std::endl
-            << "(" << arm1_rotation.row(0).x() << "," << arm1_rotation.row(0).y() << "," << arm1_rotation.row(0).z() << ")" << std::endl
-            << "(" << arm1_rotation.row(1).x() << "," << arm1_rotation.row(1).y() << "," << arm1_rotation.row(1).z() << ")" << std::endl
-            << "(" << arm1_rotation.row(2).x() << "," << arm1_rotation.row(2).y() << "," << arm1_rotation.row(2).z() << ")" << std::endl;
+            std::cout << "Arm" << i << " Rotation: " << std::endl
+                << "(" << arm_rotation.row(0).x() << "," << arm_rotation.row(0).y() << "," << arm_rotation.row(0).z() << ")" << std::endl
+                << "(" << arm_rotation.row(1).x() << "," << arm_rotation.row(1).y() << "," << arm_rotation.row(1).z() << ")" << std::endl
+                << "(" << arm_rotation.row(2).x() << "," << arm_rotation.row(2).y() << "," << arm_rotation.row(2).z() << ")" << std::endl;
 
-        Eigen::Vector3f arm1_euler_angles = arm1_rotation.eulerAngles(2, 0, 2) * (180.f / 3.14f);
+            Eigen::Vector3f arm_euler_angles = arm_rotation.eulerAngles(2, 0, 2) * (180.f / 3.14f);
 
-        std::cout << "Arm1 Euler Angles: "
-            << "(" << arm1_euler_angles.x()
-            << ", " << arm1_euler_angles.y()
-            << ", " << arm1_euler_angles.z()
-            << ")" << std::endl;
+            std::cout << "Arm" << i << " Euler Angles: "
+                << "(" << arm_euler_angles.x()
+                << ", " << arm_euler_angles.y()
+                << ", " << arm_euler_angles.z()
+                << ")" << std::endl;
+
+            return;
+        }
     }
-    else if (pickedModel == cyls[1]) {
-        Eigen::Matrix3f arm2_rotation = pickedModel->GetRotation();
+    // None of the arms were selected
+    Eigen::Matrix3f scene_rotation = root->GetRotation();
 
-        std::cout << "Arm2 Rotation: " << std::endl
-            << "(" << arm2_rotation.row(0).x() << "," << arm2_rotation.row(0).y() << "," << arm2_rotation.row(0).z() << ")" << std::endl
-            << "(" << arm2_rotation.row(1).x() << "," << arm2_rotation.row(1).y() << "," << arm2_rotation.row(1).z() << ")" << std::endl
-            << "(" << arm2_rotation.row(2).x() << "," << arm2_rotation.row(2).y() << "," << arm2_rotation.row(2).z() << ")" << std::endl;
-
-        Eigen::Vector3f arm2_euler_angles = arm2_rotation.eulerAngles(2, 0, 2) * (180.f / 3.14f);
-
-        std::cout << "Arm2 Euler Angles: "
-            << "(" << arm2_euler_angles.x()
-            << ", " << arm2_euler_angles.y()
-            << ", " << arm2_euler_angles.z()
-            << ")" << std::endl;
-    }
-    else if (pickedModel == cyls[2]) {
-        Eigen::Matrix3f arm3_rotation = pickedModel->GetRotation();
-
-        std::cout << "Arm3 Rotation: " << std::endl
-            << "(" << arm3_rotation.row(0).x() << "," << arm3_rotation.row(0).y() << "," << arm3_rotation.row(0).z() << ")" << std::endl
-            << "(" << arm3_rotation.row(1).x() << "," << arm3_rotation.row(1).y() << "," << arm3_rotation.row(1).z() << ")" << std::endl
-            << "(" << arm3_rotation.row(2).x() << "," << arm3_rotation.row(2).y() << "," << arm3_rotation.row(2).z() << ")" << std::endl;
-
-        Eigen::Vector3f arm3_euler_angles = arm3_rotation.eulerAngles(2, 0, 2) * (180.f / 3.14f);
-
-        std::cout << "Arm3 Euler Angles: "
-            << "(" << arm3_euler_angles.x()
-            << ", " << arm3_euler_angles.y()
-            << ", " << arm3_euler_angles.z()
-            << ")" << std::endl;
-    }
-    else {
-        Eigen::Matrix3f scene_rotation = root->GetRotation();
-
-        std::cout << "Scene Rotation: " << std::endl
-            << "(" << scene_rotation.row(0).x() << "," << scene_rotation.row(0).y() << "," << scene_rotation.row(0).z() << ")" << std::endl
-            << "(" << scene_rotation.row(1).x() << "," << scene_rotation.row(1).y() << "," << scene_rotation.row(1).z() << ")" << std::endl
-            << "(" << scene_rotation.row(2).x() << "," << scene_rotation.row(2).y() << "," << scene_rotation.row(2).z() << ")" << std::endl;
-    }
+    std::cout << "Scene Rotation: " << std::endl
+        << "(" << scene_rotation.row(0).x() << "," << scene_rotation.row(0).y() << "," << scene_rotation.row(0).z() << ")" << std::endl
+        << "(" << scene_rotation.row(1).x() << "," << scene_rotation.row(1).y() << "," << scene_rotation.row(1).z() << ")" << std::endl
+        << "(" << scene_rotation.row(2).x() << "," << scene_rotation.row(2).y() << "," << scene_rotation.row(2).z() << ")" << std::endl;
 }
 
 void BasicScene::T_Callback()
 {
-    Eigen::Vector3f arm1_tip_position = GetLinkTipPosition(0);
-    Eigen::Vector3f arm2_tip_position = GetLinkTipPosition(1);
-    Eigen::Vector3f arm3_tip_position = GetLinkTipPosition(2);
+    for (int i = 0; i < num_of_links; i++) {
+        Eigen::Vector3f arm_tip_position = GetLinkTipPosition(i);
 
-    std::cout << "Arm1 Tip Position: "
-        << "(" << arm1_tip_position.x()
-        << ", " << arm1_tip_position.y()
-        << ", " << arm1_tip_position.z()
-        << ")" << std::endl;
-
-    std::cout << "Arm2 Tip Position: "
-        << "(" << arm2_tip_position.x()
-        << ", " << arm2_tip_position.y()
-        << ", " << arm2_tip_position.z()
-        << ")" << std::endl;
-
-    std::cout << "Arm3 Tip Position: "
-        << "(" << arm3_tip_position.x()
-        << ", " << arm3_tip_position.y()
-        << ", " << arm3_tip_position.z()
-        << ")" << std::endl;
+        std::cout << "Arm" << i << " Tip Position: "
+            << "(" << arm_tip_position.x()
+            << ", " << arm_tip_position.y()
+            << ", " << arm_tip_position.z()
+            << ")" << std::endl;
+    }
 }
 
 void BasicScene::D_Callback() 
@@ -743,18 +712,24 @@ void BasicScene::D_Callback()
 
 void BasicScene::N_Callback()
 {
-    if (pickedModel == cyls[0]) {
-        pickedModel = cyls[1];
+    bool arm_selected = false;
+    for (int i = 0; i < num_of_links && !arm_selected; i++) {
+        if (pickedModel == cyls[i]) {
+            // Last link
+            if (i == num_of_links - 1) {
+                i = -1;
+            }
+            pickedModel = cyls[i + 1];
+            arm_selected = true;
+        }
     }
-    else if (pickedModel == cyls[1]) {
-        pickedModel = cyls[2];
-    }
-    // Last link or any other model
-    else {
+    // None of the arms were selected
+    if (!arm_selected) {
         pickedModel = cyls[0];
     }
 }
 
+// IN PROGRESS
 void BasicScene::Right_Callback()
 {
     auto system = camera->GetRotation().transpose();
@@ -770,6 +745,7 @@ void BasicScene::Right_Callback()
     }
 }
 
+// IN PROGRESS
 void BasicScene::Left_Callback()
 {
     auto system = camera->GetRotation().transpose();
@@ -785,6 +761,7 @@ void BasicScene::Left_Callback()
     }
 }
 
+// IN PROGRESS
 void BasicScene::Up_Callback()
 {
     auto system = camera->GetRotation().transpose();
@@ -800,6 +777,7 @@ void BasicScene::Up_Callback()
     }
 }
 
+// IN PROGRESS
 void BasicScene::Down_Callback()
 {
     auto system = camera->GetRotation().transpose();
@@ -837,6 +815,7 @@ void BasicScene::Numbers_Callback(int num_of_link) {
     root->RemoveChild(cyls[0]);
     axis.clear();
     cyls.clear();
+    pickedModel = NULL;
 
 
     auto program = std::make_shared<Program>("shaders/phongShader");
@@ -865,7 +844,6 @@ void BasicScene::Numbers_Callback(int num_of_link) {
     cyls.push_back(Model::Create("cyl", cylMesh, material));
     cyls[0]->Scale(scaleFactor, Axis::X);
     cyls[0]->SetCenter(Eigen::Vector3f(0, 0, -0.8f * scaleFactor));
-    cyls[0]->RotateByDegree(90, Eigen::Vector3f(-1, 0, 0));
     root->AddChild(cyls[0]);
 
     for (int i = 1; i < num_of_link; i++)
@@ -884,6 +862,7 @@ void BasicScene::Numbers_Callback(int num_of_link) {
         axis[i]->Translate(0.8f * scaleFactor, Axis::Z);
     }
     cyls[0]->Translate({ 0,0,0.8f * scaleFactor });
+    root->Translate({ 0,0,0 });
 
     first_link_id = 0;
     last_link_id = num_of_link - 1;
