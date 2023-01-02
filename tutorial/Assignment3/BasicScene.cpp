@@ -745,7 +745,36 @@ void BasicScene::Right_Callback()
     bool arm_selected = false;
     for (int i = 0; i < num_of_links && !arm_selected; i++) {
         if (pickedModel == cyls[i]) {
-            pickedModel->RotateInSystem(system, 0.1f, Axis::Z);
+            Eigen::Matrix3f R = pickedModel->GetRotation();
+
+            // Get phi, theta and psi, according to ZXZ Euler angles
+            Eigen::Vector3f zxz = R.eulerAngles(2, 0, 2);
+
+            // Building eulaer angles matrices
+            Eigen::Matrix3f phi;
+            phi.row(0) = Eigen::Vector3f(cos(zxz.x()), -sin(zxz.x()), 0);
+            phi.row(1) = Eigen::Vector3f(sin(zxz.x()), cos(zxz.x()), 0);
+            phi.row(2) = Eigen::Vector3f(0, 0, 1);
+
+            Eigen::Matrix3f theta;
+            theta.row(0) = Eigen::Vector3f(1, 0, 0);
+            theta.row(1) = Eigen::Vector3f(0, cos(zxz.y()), -sin(zxz.y()));
+            theta.row(2) = Eigen::Vector3f(0, sin(zxz.y()), cos(zxz.y()));
+
+            Eigen::Matrix3f psi;
+            psi.row(0) = Eigen::Vector3f(cos(zxz.z()), -sin(zxz.z()), 0);
+            psi.row(1) = Eigen::Vector3f(sin(zxz.z()), cos(zxz.z()), 0);
+            psi.row(2) = Eigen::Vector3f(0, 0, 1);
+
+            float angle = 0.1f;
+            Eigen::Matrix3f z;
+            z.row(0) = Eigen::Vector3f(cos(angle), -sin(angle), 0);
+            z.row(1) = Eigen::Vector3f(sin(angle), cos(angle), 0);
+            z.row(2) = Eigen::Vector3f(0, 0, 1);
+
+            Eigen::Matrix3f R_new = phi * theta * psi * z;
+
+            pickedModel->Rotate(R.inverse() * R_new);
             arm_selected = true;
         }
     }
@@ -763,7 +792,36 @@ void BasicScene::Left_Callback()
     bool arm_selected = false;
     for (int i = 0; i < num_of_links && !arm_selected; i++) {
         if (pickedModel == cyls[i]) {
-            pickedModel->RotateInSystem(system, -0.1f, Axis::Z);
+            Eigen::Matrix3f R = pickedModel->GetRotation();
+
+            // Get phi, theta and psi, according to ZXZ Euler angles
+            Eigen::Vector3f zxz = R.eulerAngles(2, 0, 2);
+
+            // Building eulaer angles matrices
+            Eigen::Matrix3f phi;
+            phi.row(0) = Eigen::Vector3f(cos(zxz.x()), -sin(zxz.x()), 0);
+            phi.row(1) = Eigen::Vector3f(sin(zxz.x()), cos(zxz.x()), 0);
+            phi.row(2) = Eigen::Vector3f(0, 0, 1);
+
+            Eigen::Matrix3f theta;
+            theta.row(0) = Eigen::Vector3f(1, 0, 0);
+            theta.row(1) = Eigen::Vector3f(0, cos(zxz.y()), -sin(zxz.y()));
+            theta.row(2) = Eigen::Vector3f(0, sin(zxz.y()), cos(zxz.y()));
+
+            Eigen::Matrix3f psi;
+            psi.row(0) = Eigen::Vector3f(cos(zxz.z()), -sin(zxz.z()), 0);
+            psi.row(1) = Eigen::Vector3f(sin(zxz.z()), cos(zxz.z()), 0);
+            psi.row(2) = Eigen::Vector3f(0, 0, 1);
+
+            float angle = -0.1f;
+            Eigen::Matrix3f z;
+            z.row(0) = Eigen::Vector3f(cos(angle), -sin(angle), 0);
+            z.row(1) = Eigen::Vector3f(sin(angle), cos(angle), 0);
+            z.row(2) = Eigen::Vector3f(0, 0, 1);
+
+            Eigen::Matrix3f R_new = phi * theta * psi * z;
+
+            pickedModel->Rotate(R.inverse() * R_new);
             arm_selected = true;
         }
     }
@@ -781,7 +839,36 @@ void BasicScene::Up_Callback()
     bool arm_selected = false;
     for (int i = 0; i < num_of_links && !arm_selected; i++) {
         if (pickedModel == cyls[i]) {
-            pickedModel->RotateInSystem(system, 0.1f, Axis::X);
+            Eigen::Matrix3f R = pickedModel->GetRotation();
+
+            // Get phi, theta and psi, according to ZXZ Euler angles
+            Eigen::Vector3f zxz = R.eulerAngles(2, 0, 2);
+
+            // Building eulaer angles matrices
+            Eigen::Matrix3f phi;
+            phi.row(0) = Eigen::Vector3f(cos(zxz.x()), -sin(zxz.x()), 0);
+            phi.row(1) = Eigen::Vector3f(sin(zxz.x()), cos(zxz.x()), 0);
+            phi.row(2) = Eigen::Vector3f(0, 0, 1);
+
+            Eigen::Matrix3f theta;
+            theta.row(0) = Eigen::Vector3f(1, 0, 0);
+            theta.row(1) = Eigen::Vector3f(0, cos(zxz.y()), -sin(zxz.y()));
+            theta.row(2) = Eigen::Vector3f(0, sin(zxz.y()), cos(zxz.y()));
+
+            Eigen::Matrix3f psi;
+            psi.row(0) = Eigen::Vector3f(cos(zxz.z()), -sin(zxz.z()), 0);
+            psi.row(1) = Eigen::Vector3f(sin(zxz.z()), cos(zxz.z()), 0);
+            psi.row(2) = Eigen::Vector3f(0, 0, 1);
+
+            float angle = 0.1f;
+            Eigen::Matrix3f x;
+            x.row(0) = Eigen::Vector3f(1, 0, 0);
+            x.row(1) = Eigen::Vector3f(0, cos(angle), -sin(angle));
+            x.row(2) = Eigen::Vector3f(0, sin(angle), cos(angle));
+
+            Eigen::Matrix3f R_new = phi * theta * x * psi;
+
+            pickedModel->Rotate(R.inverse() * R_new);
             arm_selected = true;
         }
     }
@@ -799,7 +886,36 @@ void BasicScene::Down_Callback()
     bool arm_selected = false;
     for (int i = 0; i < num_of_links && !arm_selected; i++) {
         if (pickedModel == cyls[i]) {
-            pickedModel->RotateInSystem(system, -0.1f, Axis::X);
+            Eigen::Matrix3f R = pickedModel->GetRotation();
+
+            // Get phi, theta and psi, according to ZXZ Euler angles
+            Eigen::Vector3f zxz = R.eulerAngles(2, 0, 2);
+
+            // Building eulaer angles matrices
+            Eigen::Matrix3f phi;
+            phi.row(0) = Eigen::Vector3f(cos(zxz.x()), -sin(zxz.x()), 0);
+            phi.row(1) = Eigen::Vector3f(sin(zxz.x()), cos(zxz.x()), 0);
+            phi.row(2) = Eigen::Vector3f(0, 0, 1);
+
+            Eigen::Matrix3f theta;
+            theta.row(0) = Eigen::Vector3f(1, 0, 0);
+            theta.row(1) = Eigen::Vector3f(0, cos(zxz.y()), -sin(zxz.y()));
+            theta.row(2) = Eigen::Vector3f(0, sin(zxz.y()), cos(zxz.y()));
+
+            Eigen::Matrix3f psi;
+            psi.row(0) = Eigen::Vector3f(cos(zxz.z()), -sin(zxz.z()), 0);
+            psi.row(1) = Eigen::Vector3f(sin(zxz.z()), cos(zxz.z()), 0);
+            psi.row(2) = Eigen::Vector3f(0, 0, 1);
+
+            float angle = -0.1f;
+            Eigen::Matrix3f x;
+            x.row(0) = Eigen::Vector3f(1, 0, 0);
+            x.row(1) = Eigen::Vector3f(0, cos(angle), -sin(angle));
+            x.row(2) = Eigen::Vector3f(0, sin(angle), cos(angle));
+
+            Eigen::Matrix3f R_new = phi * theta * x * psi;
+
+            pickedModel->Rotate(R.inverse() * R_new);
             arm_selected = true;
         }
     }
