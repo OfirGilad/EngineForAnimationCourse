@@ -39,6 +39,8 @@ public:
     void Down_Callback();
     void S_Callback();
 
+    void Numbers_Callback(int num_of_link);
+
 private:
     std::shared_ptr<Movable> root;
     std::shared_ptr<cg3d::Model> sphere1 ,cube;
@@ -57,5 +59,10 @@ private:
     bool animate_CCD = false;
     bool animate_Fabrik = false;
     float delta = 0.05;
-    float angle_divider = 50.f;
+    float angle_divider = 10.f;
+
+    int first_link_id = 0;
+    int last_link_id = 2;
+    int num_of_links = 3;
+    float link_length = 1.6f;
 };

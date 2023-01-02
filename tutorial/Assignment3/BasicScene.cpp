@@ -77,7 +77,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     cyls.push_back(Model::Create("cyl", cylMesh, material));
     cyls[0]->Scale(scaleFactor,Axis::X);
     cyls[0]->SetCenter(Eigen::Vector3f(0,0,-0.8f*scaleFactor));
-    cyls[0]->RotateByDegree(90, Eigen::Vector3f(0,0,1));
+    cyls[0]->RotateByDegree(90, Eigen::Vector3f(-1,0,0));
     root->AddChild(cyls[0]);
    
     for(int i = 1; i < 3; i++)
@@ -118,7 +118,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     //colors = Eigen::MatrixXd::Ones(1,3);
     
     //cyl->AddOverlay({points,edges,colors},true);
-    cube->mode =1   ; 
+    cube->mode = 1; 
     auto mesh = cube->GetMeshList();
 
     //autoCube->AddOverlay(points,edges,colors);
@@ -311,32 +311,32 @@ void BasicScene::KeyCallback(Viewport* viewport, int x, int y, int key, int scan
             case GLFW_KEY_F:
                 camera->TranslateInSystem(system, {0, 0, -0.1f});
                 break;
-            case GLFW_KEY_1:
-                if(pickedIndex > 0)
-                  pickedIndex--;
-                break;
-            case GLFW_KEY_2:
-                if(pickedIndex < cyls.size()-1)
-                    pickedIndex++;
-                break;
-            case GLFW_KEY_3:
-                if(tipIndex >= 0)
-                {
-                  if(tipIndex == cyls.size())
-                    tipIndex--;
-                  sphere1->Translate(GetSpherePos());
-                  tipIndex--;
-                }
-                break;
-            case GLFW_KEY_4:
-                if(tipIndex < cyls.size())
-                {
-                    if(tipIndex < 0)
-                      tipIndex++;
-                    sphere1->Translate(GetSpherePos());
-                    tipIndex++;
-                }
-                break;
+            //case GLFW_KEY_1:
+            //    if(pickedIndex > 0)
+            //      pickedIndex--;
+            //    break;
+            //case GLFW_KEY_2:
+            //    if(pickedIndex < cyls.size()-1)
+            //        pickedIndex++;
+            //    break;
+            //case GLFW_KEY_3:
+            //    if(tipIndex >= 0)
+            //    {
+            //      if(tipIndex == cyls.size())
+            //        tipIndex--;
+            //      sphere1->Translate(GetSpherePos());
+            //      tipIndex--;
+            //    }
+            //    break;
+            //case GLFW_KEY_4:
+            //    if(tipIndex < cyls.size())
+            //    {
+            //        if(tipIndex < 0)
+            //          tipIndex++;
+            //        sphere1->Translate(GetSpherePos());
+            //        tipIndex++;
+            //    }
+            //    break;
 
             // New Keys
             case GLFW_KEY_SPACE: // IK solver
@@ -368,6 +368,21 @@ void BasicScene::KeyCallback(Viewport* viewport, int x, int y, int key, int scan
                 break;
             case GLFW_KEY_S: // Switch IK modes
                 S_Callback();
+                break;
+            case GLFW_KEY_1:
+                Numbers_Callback(1);
+                break;
+            case GLFW_KEY_2:
+                Numbers_Callback(2);
+                break;
+            case GLFW_KEY_3:
+                Numbers_Callback(3);
+                break;
+            case GLFW_KEY_4:
+                Numbers_Callback(4);
+                break;
+            case GLFW_KEY_5:
+                Numbers_Callback(5);
                 break;
         }
     }
@@ -413,11 +428,6 @@ Eigen::Vector3f BasicScene::GetLinkSourcePosition(int link_id) {
 
 void BasicScene::IKCyclicCoordinateDecentMethod() {
     if (animate_CCD && animate) {
-        int first_link_id = 0;
-        int last_link_id = 2;
-        int num_of_links = 3;
-        float link_length = 1.6f;
-
         Eigen::Vector3f D = GetDestinationPosition();
         Eigen::Vector3f first_link_position = GetLinkSourcePosition(first_link_id);
 
@@ -487,11 +497,6 @@ void BasicScene::fix_rotate() {
 
 void BasicScene::IKFabrikMethod() {
     if (animate_Fabrik && animate) {
-        int first_link_id = 0;
-        int last_link_id = 2;
-        int num_of_links = 3;
-        float link_length = 1.6f;
-
         // The joint positions
         std::vector<Eigen::Vector3f> p; 
         p.resize(num_of_links + 1);
@@ -822,4 +827,65 @@ void BasicScene::S_Callback()
         std::cout << "IK mode: Fabrik Method" << std::endl;
         IK_mode = 1;
     }
+}
+
+void BasicScene::Numbers_Callback(int num_of_link) {
+    animate_CCD = false;
+    animate_Fabrik = false;
+    root->RemoveChild(axis[0]);
+    root->RemoveChild(cyls[0]);
+    axis.clear();
+    cyls.clear();
+
+
+    auto program = std::make_shared<Program>("shaders/phongShader");
+    auto program1 = std::make_shared<Program>("shaders/pickingShader");
+
+    auto material{ std::make_shared<Material>("material", program) }; // empty material
+    auto material1{ std::make_shared<Material>("material", program1) }; // empty material
+    //SetNamedObject(cube, Model::Create, Mesh::Cube(), material, shared_from_this());
+
+    material->AddTexture(0, "textures/box0.bmp", 2);
+    auto cylMesh{ IglLoader::MeshFromFiles("cyl_igl","data/zcylinder.obj") };
+
+    Eigen::MatrixXd vertices(6, 3);
+    vertices << -1, 0, 0, 1, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, -1, 0, 0, 1;
+    Eigen::MatrixXi faces(3, 2);
+    faces << 0, 1, 2, 3, 4, 5;
+    Eigen::MatrixXd vertexNormals = Eigen::MatrixXd::Ones(6, 3);
+    Eigen::MatrixXd textureCoords = Eigen::MatrixXd::Ones(6, 2);
+    std::shared_ptr<Mesh> coordsys = std::make_shared<Mesh>("coordsys", vertices, faces, vertexNormals, textureCoords);
+    axis.push_back(Model::Create("axis", coordsys, material1));
+    axis[0]->mode = 1;
+    axis[0]->Scale(4, Axis::XYZ);
+    //axis[0]->lineWidth = 5;
+    root->AddChild(axis[0]);
+    float scaleFactor = 1;
+    cyls.push_back(Model::Create("cyl", cylMesh, material));
+    cyls[0]->Scale(scaleFactor, Axis::X);
+    cyls[0]->SetCenter(Eigen::Vector3f(0, 0, -0.8f * scaleFactor));
+    cyls[0]->RotateByDegree(90, Eigen::Vector3f(-1, 0, 0));
+    root->AddChild(cyls[0]);
+
+    for (int i = 1; i < num_of_link; i++)
+    {
+        cyls.push_back(Model::Create("cyl", cylMesh, material));
+        cyls[i]->Scale(scaleFactor, Axis::X);
+        cyls[i]->Translate(1.6f * scaleFactor, Axis::Z);
+        cyls[i]->SetCenter(Eigen::Vector3f(0, 0, -0.8f * scaleFactor));
+        cyls[i - 1]->AddChild(cyls[i]);
+
+        // Axis
+        axis.push_back(Model::Create("axis", coordsys, material1));
+        axis[i]->mode = 1;
+        axis[i]->Scale(4, Axis::XYZ);
+        cyls[i - 1]->AddChild(axis[i]);
+        axis[i]->Translate(0.8f * scaleFactor, Axis::Z);
+    }
+    cyls[0]->Translate({ 0,0,0.8f * scaleFactor });
+
+    first_link_id = 0;
+    last_link_id = num_of_link - 1;
+    num_of_links = num_of_link;
+    link_length = 1.6f;
 }
