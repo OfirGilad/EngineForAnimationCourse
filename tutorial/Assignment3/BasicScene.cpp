@@ -138,6 +138,9 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     std::cout<< "faces to edges: \n "<< EMAP.transpose()<<std::endl;
     std::cout<< "edges indices: \n" << EI.transpose() <<std::endl;
 
+    // Small update to fix the models appearance
+    autoCube->Translate({ 0,0,0 });
+    sphere1->Translate({ 0,0,0 });
 }
 
 void BasicScene::Update(const Program& program, const Eigen::Matrix4f& proj, const Eigen::Matrix4f& view, const Eigen::Matrix4f& model)
