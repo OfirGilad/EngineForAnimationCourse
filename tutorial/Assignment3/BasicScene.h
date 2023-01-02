@@ -23,7 +23,6 @@ public:
     Eigen::Vector3f GetLinkSourcePosition(int link_id);
 
     void IKCyclicCoordinateDecentMethod();
-    void fix_rotate();
     void IKFabrikMethod();
     void IKSolverHelper(int link_id, Eigen::Vector3f D);
 

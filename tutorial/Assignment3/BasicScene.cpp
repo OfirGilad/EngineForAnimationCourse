@@ -489,7 +489,6 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
 
             if (distance < delta) {
                 std::cout << "distance: " << distance << std::endl;
-                //fix_rotate();
                 animate_CCD = false;
                 return;
             }
@@ -512,27 +511,6 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
             curr_link--;
         }
         animate = false;
-    }
-}
-
-void BasicScene::fix_rotate() {
-    int first_link_id = 0;
-    int num_of_links = 3;
-    auto system = camera->GetRotation().transpose() * GetRotation();
-
-    Eigen::Vector3f Z(0, 0, 1);
-    int curr_link = first_link_id;
-
-    while (curr_link != num_of_links) {
-        Eigen::Matrix3f R = cyls[curr_link]->GetRotation();
-        Eigen::Vector3f ea = R.eulerAngles(2, 0, 2);//get the rotation angles
-        float angleZ = ea[2] * (180.f / 3.14f);
-        cyls[curr_link]->RotateByDegree(-angleZ, Z);
-
-        curr_link = curr_link + 1;
-        if (curr_link != num_of_links) {
-            cyls[curr_link]->RotateInSystem(system * cyls[curr_link]->GetRotation(), angleZ, Axis::Z);
-        }
     }
 }
 
@@ -633,7 +611,6 @@ void BasicScene::IKFabrikMethod() {
             float distance = (t - GetLinkTipPosition(last_link_id)).norm();
 
             if (distance < delta) {
-                //fix_rotate();
                 animate_Fabrik = false;
                 std::cout << "distance: " << distance << std::endl;
             }
