@@ -77,9 +77,9 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     cyls.push_back(Model::Create("cyl", cylMesh, material));
     cyls[0]->Scale(scaleFactor,Axis::X);
     cyls[0]->SetCenter(Eigen::Vector3f(0,0,-0.8f*scaleFactor));
-    cyls[0]->RotateByDegree(90, Eigen::Vector3f(-1,0,0));
+    cyls[0]->RotateByDegree(90, Eigen::Vector3f(0,0,1));
     root->AddChild(cyls[0]);
-   
+
     for(int i = 1; i < 3; i++)
     { 
         cyls.push_back(Model::Create("cyl", cylMesh, material));
@@ -96,6 +96,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
         axis[i]->Translate(0.8f*scaleFactor, Axis::Z);
     }
     cyls[0]->Translate({0,0,0.8f*scaleFactor});
+    root->RotateByDegree(90, Eigen::Vector3f(-1, 0, 0));
 
     auto morphFunc = [](Model* model, cg3d::Visitor* visitor) {
       return model->meshIndex; //(model->GetMeshList())[0]->data.size()-1;
@@ -762,7 +763,7 @@ void BasicScene::Right_Callback()
         pickedModel->RotateInSystem(system, 0.1f, Axis::Y);
     }
     else if ((pickedModel == cyls[1]) || (pickedModel == cyls[2])) {
-        pickedModel->RotateInSystem(system, 0.1f, Axis::X);
+        pickedModel->RotateInSystem(system, 0.1f, Axis::Z);
     }
     else {
         root->RotateInSystem(system, -0.1f, Axis::Y);
@@ -777,7 +778,7 @@ void BasicScene::Left_Callback()
         pickedModel->RotateInSystem(system, -0.1f, Axis::Y);
     }
     else if ((pickedModel == cyls[1]) || (pickedModel == cyls[2])) {
-        pickedModel->RotateInSystem(system, -0.1f, Axis::X);
+        pickedModel->RotateInSystem(system, -0.1f, Axis::Z);
     }
     else {
         root->RotateInSystem(system, 0.1f, Axis::Y);
