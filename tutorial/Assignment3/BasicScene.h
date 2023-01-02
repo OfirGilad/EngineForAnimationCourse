@@ -59,7 +59,7 @@ private:
     bool animate_CCD = false;
     bool animate_Fabrik = false;
     float delta = 0.05;
-    float angle_divider = 10.f;
+    float angle_divider = 50.f;
 
     int first_link_id = 0;
     int last_link_id = 2;
