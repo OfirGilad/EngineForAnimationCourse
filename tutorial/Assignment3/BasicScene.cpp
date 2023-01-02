@@ -379,20 +379,43 @@ void BasicScene::KeyCallback(Viewport* viewport, int x, int y, int key, int scan
             case GLFW_KEY_S: // Switch IK modes
                 S_Callback();
                 break;
-            case GLFW_KEY_1:
+            case GLFW_KEY_R: // Reset arms positions
+                Numbers_Callback(num_of_links);
+                break;
+            case GLFW_KEY_1: // Build 1 arm
                 Numbers_Callback(1);
                 break;
-            case GLFW_KEY_2:
+            case GLFW_KEY_2: // Build 2 arms
                 Numbers_Callback(2);
                 break;
-            case GLFW_KEY_3:
+            case GLFW_KEY_3: // Build 3 arms
                 Numbers_Callback(3);
                 break;
-            case GLFW_KEY_4:
+            case GLFW_KEY_4: // Build 4 arms
                 Numbers_Callback(4);
                 break;
-            case GLFW_KEY_5:
+            case GLFW_KEY_5: // Build 5 arms
                 Numbers_Callback(5);
+                break;
+            case GLFW_KEY_6: // Build 6 arms
+                Numbers_Callback(6);
+                break;
+            case GLFW_KEY_7: // Build 7 arms
+                Numbers_Callback(7);
+                break;
+            case GLFW_KEY_8: // Build 8 arms
+                Numbers_Callback(8);
+                break;
+            case GLFW_KEY_9: // Build 9 arms
+                Numbers_Callback(9);
+                break;
+            case GLFW_KEY_RIGHT_BRACKET: // Add 1 more arm
+                Numbers_Callback(num_of_links + 1);
+                break;
+            case GLFW_KEY_LEFT_BRACKET: // Remove 1 arm
+                if (num_of_links != 1) {
+                    Numbers_Callback(num_of_links - 1);
+                }
                 break;
         }
     }
