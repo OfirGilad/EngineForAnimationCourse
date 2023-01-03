@@ -21,6 +21,7 @@ public:
     Eigen::Vector3f GetDestinationPosition();
     Eigen::Vector3f GetLinkTipPosition(int link_id);
     Eigen::Vector3f GetLinkSourcePosition(int link_id);
+    std::vector<Eigen::Matrix3f> GetEulerAnglesMatrices(Eigen::Matrix3f R);
 
     void IKCyclicCoordinateDecentMethod();
     void IKFabrikMethod();

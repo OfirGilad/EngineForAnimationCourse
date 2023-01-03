@@ -262,8 +262,30 @@ void BasicScene::CursorPosCallback(Viewport* viewport, int x, int y, bool draggi
                 bool arm_selected = false;
                 for (int i = 0; i < num_of_links && !arm_selected; i++) {
                     if (pickedModel == cyls[i]) {
-                        pickedModel->RotateInSystem(system, -float(xAtPress - x) / angleCoeff, Axis::Z);
-                        pickedModel->RotateInSystem(system, float(yAtPress - y) / angleCoeff, Axis::X);
+                        Eigen::Matrix3f R = pickedModel->GetRotation();
+                        std::vector<Eigen::Matrix3f> euler_angles_matrices = GetEulerAnglesMatrices(R);
+
+                        // Left-Right mouse movements
+                        float z_angle = -float(xAtPress - x) / angleCoeff;
+                        Eigen::Matrix3f rot_z;
+                        rot_z.row(0) = Eigen::Vector3f(cos(z_angle), -sin(z_angle), 0);
+                        rot_z.row(1) = Eigen::Vector3f(sin(z_angle), cos(z_angle), 0);
+                        rot_z.row(2) = Eigen::Vector3f(0, 0, 1);
+
+                        // Up-Down mouse movements
+                        float x_angle = float(yAtPress - y) / angleCoeff;
+                        Eigen::Matrix3f rot_x;
+                        rot_x.row(0) = Eigen::Vector3f(1, 0, 0);
+                        rot_x.row(1) = Eigen::Vector3f(0, cos(x_angle), -sin(x_angle));
+                        rot_x.row(2) = Eigen::Vector3f(0, sin(x_angle), cos(x_angle));
+
+                        // Calculate new rotation
+                        Eigen::Matrix3f R_new = euler_angles_matrices[0] * euler_angles_matrices[1] * rot_x * euler_angles_matrices[2] * rot_z;
+                        pickedModel->Rotate(R.inverse() * R_new);
+
+
+                        //pickedModel->RotateInSystem(system, -float(xAtPress - x) / angleCoeff, Axis::Z);
+                        //pickedModel->RotateInSystem(system, float(yAtPress - y) / angleCoeff, Axis::X);
                         arm_selected = true;
                     }
                 }
@@ -467,6 +489,34 @@ Eigen::Vector3f BasicScene::GetLinkSourcePosition(int link_id) {
     return arm_source_position;
 }
 
+std::vector<Eigen::Matrix3f> BasicScene::GetEulerAnglesMatrices(Eigen::Matrix3f R) {
+    // Get phi, theta and psi, according to ZXZ Euler angles
+    Eigen::Vector3f zxz = R.eulerAngles(2, 0, 2);
+
+    // Building eulaer angles matrices
+    Eigen::Matrix3f phi;
+    phi.row(0) = Eigen::Vector3f(cos(zxz.x()), -sin(zxz.x()), 0);
+    phi.row(1) = Eigen::Vector3f(sin(zxz.x()), cos(zxz.x()), 0);
+    phi.row(2) = Eigen::Vector3f(0, 0, 1);
+
+    Eigen::Matrix3f theta;
+    theta.row(0) = Eigen::Vector3f(1, 0, 0);
+    theta.row(1) = Eigen::Vector3f(0, cos(zxz.y()), -sin(zxz.y()));
+    theta.row(2) = Eigen::Vector3f(0, sin(zxz.y()), cos(zxz.y()));
+
+    Eigen::Matrix3f psi;
+    psi.row(0) = Eigen::Vector3f(cos(zxz.z()), -sin(zxz.z()), 0);
+    psi.row(1) = Eigen::Vector3f(sin(zxz.z()), cos(zxz.z()), 0);
+    psi.row(2) = Eigen::Vector3f(0, 0, 1);
+
+    std::vector<Eigen::Matrix3f> euler_angles_matrices;
+    euler_angles_matrices.push_back(phi);
+    euler_angles_matrices.push_back(theta);
+    euler_angles_matrices.push_back(psi);
+
+    return euler_angles_matrices;
+}
+
 void BasicScene::IKCyclicCoordinateDecentMethod() {
     if (animate_CCD && animate) {
         Eigen::Vector3f D = GetDestinationPosition();
@@ -662,7 +712,6 @@ void BasicScene::Space_Callback()
     }
 }
 
-// IN PROGRESS
 void BasicScene::P_Callback()
 {
     for (int i = 0; i < num_of_links; i++) {
@@ -672,15 +721,34 @@ void BasicScene::P_Callback()
             std::cout << "Arm" << i << " Rotation: " << std::endl
                 << "(" << arm_rotation.row(0).x() << "," << arm_rotation.row(0).y() << "," << arm_rotation.row(0).z() << ")" << std::endl
                 << "(" << arm_rotation.row(1).x() << "," << arm_rotation.row(1).y() << "," << arm_rotation.row(1).z() << ")" << std::endl
-                << "(" << arm_rotation.row(2).x() << "," << arm_rotation.row(2).y() << "," << arm_rotation.row(2).z() << ")" << std::endl;
+                << "(" << arm_rotation.row(2).x() << "," << arm_rotation.row(2).y() << "," << arm_rotation.row(2).z() << ")" << std::endl
+                << std::endl;
 
             Eigen::Vector3f arm_euler_angles = arm_rotation.eulerAngles(2, 0, 2) * (180.f / 3.14f);
+            std::vector<Eigen::Matrix3f> euler_angles_matrices = GetEulerAnglesMatrices(arm_rotation);
 
-            std::cout << "Arm" << i << " Euler Angles: "
-                << "(" << arm_euler_angles.x()
-                << ", " << arm_euler_angles.y()
-                << ", " << arm_euler_angles.z()
-                << ")" << std::endl;
+            std::cout << "Arm" << i << " Euler Angles: " << std::endl
+                << "phi: " << arm_euler_angles.x() << " (Deg)" << std::endl
+                << "theta: " << arm_euler_angles.y() << " (Deg)" << std::endl
+                << "psi: " << arm_euler_angles.z() << " (Deg)" << std::endl
+                << std::endl;
+
+            std::cout << "phi matrix: " << std::endl
+                << "(" << euler_angles_matrices[0].row(0).x() << "," << euler_angles_matrices[0].row(0).y() << "," << euler_angles_matrices[0].row(0).z() << ")" << std::endl
+                << "(" << euler_angles_matrices[0].row(1).x() << "," << euler_angles_matrices[0].row(1).y() << "," << euler_angles_matrices[0].row(1).z() << ")" << std::endl
+                << "(" << euler_angles_matrices[0].row(2).x() << "," << euler_angles_matrices[0].row(2).y() << "," << euler_angles_matrices[0].row(2).z() << ")" << std::endl
+                << std::endl;
+
+            std::cout << "theta matrix: " << std::endl
+                << "(" << euler_angles_matrices[1].row(0).x() << "," << euler_angles_matrices[1].row(0).y() << "," << euler_angles_matrices[1].row(0).z() << ")" << std::endl
+                << "(" << euler_angles_matrices[1].row(1).x() << "," << euler_angles_matrices[1].row(1).y() << "," << euler_angles_matrices[1].row(1).z() << ")" << std::endl
+                << "(" << euler_angles_matrices[1].row(2).x() << "," << euler_angles_matrices[1].row(2).y() << "," << euler_angles_matrices[1].row(2).z() << ")" << std::endl
+                << std::endl;
+
+            std::cout << "psi matrix: " << std::endl
+                << "(" << euler_angles_matrices[2].row(0).x() << "," << euler_angles_matrices[2].row(0).y() << "," << euler_angles_matrices[2].row(0).z() << ")" << std::endl
+                << "(" << euler_angles_matrices[2].row(1).x() << "," << euler_angles_matrices[2].row(1).y() << "," << euler_angles_matrices[2].row(1).z() << ")" << std::endl
+                << "(" << euler_angles_matrices[2].row(2).x() << "," << euler_angles_matrices[2].row(2).y() << "," << euler_angles_matrices[2].row(2).z() << ")" << std::endl;
 
             return;
         }
@@ -746,25 +814,7 @@ void BasicScene::Right_Callback()
     for (int i = 0; i < num_of_links && !arm_selected; i++) {
         if (pickedModel == cyls[i]) {
             Eigen::Matrix3f R = pickedModel->GetRotation();
-
-            // Get phi, theta and psi, according to ZXZ Euler angles
-            Eigen::Vector3f zxz = R.eulerAngles(2, 0, 2);
-
-            // Building eulaer angles matrices
-            Eigen::Matrix3f phi;
-            phi.row(0) = Eigen::Vector3f(cos(zxz.x()), -sin(zxz.x()), 0);
-            phi.row(1) = Eigen::Vector3f(sin(zxz.x()), cos(zxz.x()), 0);
-            phi.row(2) = Eigen::Vector3f(0, 0, 1);
-
-            Eigen::Matrix3f theta;
-            theta.row(0) = Eigen::Vector3f(1, 0, 0);
-            theta.row(1) = Eigen::Vector3f(0, cos(zxz.y()), -sin(zxz.y()));
-            theta.row(2) = Eigen::Vector3f(0, sin(zxz.y()), cos(zxz.y()));
-
-            Eigen::Matrix3f psi;
-            psi.row(0) = Eigen::Vector3f(cos(zxz.z()), -sin(zxz.z()), 0);
-            psi.row(1) = Eigen::Vector3f(sin(zxz.z()), cos(zxz.z()), 0);
-            psi.row(2) = Eigen::Vector3f(0, 0, 1);
+            std::vector<Eigen::Matrix3f> euler_angles_matrices = GetEulerAnglesMatrices(R);
 
             float angle = 0.1f;
             Eigen::Matrix3f z;
@@ -772,9 +822,10 @@ void BasicScene::Right_Callback()
             z.row(1) = Eigen::Vector3f(sin(angle), cos(angle), 0);
             z.row(2) = Eigen::Vector3f(0, 0, 1);
 
-            Eigen::Matrix3f R_new = phi * theta * psi * z;
-
+            // Calculate new rotation
+            Eigen::Matrix3f R_new = euler_angles_matrices[0] * euler_angles_matrices[1] * euler_angles_matrices[2] * z;
             pickedModel->Rotate(R.inverse() * R_new);
+
             arm_selected = true;
         }
     }
@@ -793,25 +844,7 @@ void BasicScene::Left_Callback()
     for (int i = 0; i < num_of_links && !arm_selected; i++) {
         if (pickedModel == cyls[i]) {
             Eigen::Matrix3f R = pickedModel->GetRotation();
-
-            // Get phi, theta and psi, according to ZXZ Euler angles
-            Eigen::Vector3f zxz = R.eulerAngles(2, 0, 2);
-
-            // Building eulaer angles matrices
-            Eigen::Matrix3f phi;
-            phi.row(0) = Eigen::Vector3f(cos(zxz.x()), -sin(zxz.x()), 0);
-            phi.row(1) = Eigen::Vector3f(sin(zxz.x()), cos(zxz.x()), 0);
-            phi.row(2) = Eigen::Vector3f(0, 0, 1);
-
-            Eigen::Matrix3f theta;
-            theta.row(0) = Eigen::Vector3f(1, 0, 0);
-            theta.row(1) = Eigen::Vector3f(0, cos(zxz.y()), -sin(zxz.y()));
-            theta.row(2) = Eigen::Vector3f(0, sin(zxz.y()), cos(zxz.y()));
-
-            Eigen::Matrix3f psi;
-            psi.row(0) = Eigen::Vector3f(cos(zxz.z()), -sin(zxz.z()), 0);
-            psi.row(1) = Eigen::Vector3f(sin(zxz.z()), cos(zxz.z()), 0);
-            psi.row(2) = Eigen::Vector3f(0, 0, 1);
+            std::vector<Eigen::Matrix3f> euler_angles_matrices = GetEulerAnglesMatrices(R);
 
             float angle = -0.1f;
             Eigen::Matrix3f z;
@@ -819,9 +852,10 @@ void BasicScene::Left_Callback()
             z.row(1) = Eigen::Vector3f(sin(angle), cos(angle), 0);
             z.row(2) = Eigen::Vector3f(0, 0, 1);
 
-            Eigen::Matrix3f R_new = phi * theta * psi * z;
-
+            // Calculate new rotation
+            Eigen::Matrix3f R_new = euler_angles_matrices[0] * euler_angles_matrices[1] * euler_angles_matrices[2] * z;
             pickedModel->Rotate(R.inverse() * R_new);
+
             arm_selected = true;
         }
     }
@@ -840,25 +874,7 @@ void BasicScene::Up_Callback()
     for (int i = 0; i < num_of_links && !arm_selected; i++) {
         if (pickedModel == cyls[i]) {
             Eigen::Matrix3f R = pickedModel->GetRotation();
-
-            // Get phi, theta and psi, according to ZXZ Euler angles
-            Eigen::Vector3f zxz = R.eulerAngles(2, 0, 2);
-
-            // Building eulaer angles matrices
-            Eigen::Matrix3f phi;
-            phi.row(0) = Eigen::Vector3f(cos(zxz.x()), -sin(zxz.x()), 0);
-            phi.row(1) = Eigen::Vector3f(sin(zxz.x()), cos(zxz.x()), 0);
-            phi.row(2) = Eigen::Vector3f(0, 0, 1);
-
-            Eigen::Matrix3f theta;
-            theta.row(0) = Eigen::Vector3f(1, 0, 0);
-            theta.row(1) = Eigen::Vector3f(0, cos(zxz.y()), -sin(zxz.y()));
-            theta.row(2) = Eigen::Vector3f(0, sin(zxz.y()), cos(zxz.y()));
-
-            Eigen::Matrix3f psi;
-            psi.row(0) = Eigen::Vector3f(cos(zxz.z()), -sin(zxz.z()), 0);
-            psi.row(1) = Eigen::Vector3f(sin(zxz.z()), cos(zxz.z()), 0);
-            psi.row(2) = Eigen::Vector3f(0, 0, 1);
+            std::vector<Eigen::Matrix3f> euler_angles_matrices = GetEulerAnglesMatrices(R);
 
             float angle = 0.1f;
             Eigen::Matrix3f x;
@@ -866,9 +882,10 @@ void BasicScene::Up_Callback()
             x.row(1) = Eigen::Vector3f(0, cos(angle), -sin(angle));
             x.row(2) = Eigen::Vector3f(0, sin(angle), cos(angle));
 
-            Eigen::Matrix3f R_new = phi * theta * x * psi;
-
+            // Calculate new rotation
+            Eigen::Matrix3f R_new = euler_angles_matrices[0] * euler_angles_matrices[1] * x * euler_angles_matrices[2];
             pickedModel->Rotate(R.inverse() * R_new);
+
             arm_selected = true;
         }
     }
@@ -887,25 +904,7 @@ void BasicScene::Down_Callback()
     for (int i = 0; i < num_of_links && !arm_selected; i++) {
         if (pickedModel == cyls[i]) {
             Eigen::Matrix3f R = pickedModel->GetRotation();
-
-            // Get phi, theta and psi, according to ZXZ Euler angles
-            Eigen::Vector3f zxz = R.eulerAngles(2, 0, 2);
-
-            // Building eulaer angles matrices
-            Eigen::Matrix3f phi;
-            phi.row(0) = Eigen::Vector3f(cos(zxz.x()), -sin(zxz.x()), 0);
-            phi.row(1) = Eigen::Vector3f(sin(zxz.x()), cos(zxz.x()), 0);
-            phi.row(2) = Eigen::Vector3f(0, 0, 1);
-
-            Eigen::Matrix3f theta;
-            theta.row(0) = Eigen::Vector3f(1, 0, 0);
-            theta.row(1) = Eigen::Vector3f(0, cos(zxz.y()), -sin(zxz.y()));
-            theta.row(2) = Eigen::Vector3f(0, sin(zxz.y()), cos(zxz.y()));
-
-            Eigen::Matrix3f psi;
-            psi.row(0) = Eigen::Vector3f(cos(zxz.z()), -sin(zxz.z()), 0);
-            psi.row(1) = Eigen::Vector3f(sin(zxz.z()), cos(zxz.z()), 0);
-            psi.row(2) = Eigen::Vector3f(0, 0, 1);
+            std::vector<Eigen::Matrix3f> euler_angles_matrices = GetEulerAnglesMatrices(R);
 
             float angle = -0.1f;
             Eigen::Matrix3f x;
@@ -913,9 +912,10 @@ void BasicScene::Down_Callback()
             x.row(1) = Eigen::Vector3f(0, cos(angle), -sin(angle));
             x.row(2) = Eigen::Vector3f(0, sin(angle), cos(angle));
 
-            Eigen::Matrix3f R_new = phi * theta * x * psi;
-
+            // Calculate new rotation
+            Eigen::Matrix3f R_new = euler_angles_matrices[0] * euler_angles_matrices[1] * x * euler_angles_matrices[2];
             pickedModel->Rotate(R.inverse() * R_new);
+
             arm_selected = true;
         }
     }
