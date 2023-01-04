@@ -263,26 +263,22 @@ void BasicScene::CursorPosCallback(Viewport* viewport, int x, int y, bool draggi
                 for (int i = 0; i < num_of_links && !arm_selected; i++) {
                     if (pickedModel == cyls[i]) {
                         Eigen::Matrix3f R = pickedModel->GetRotation();
-                        std::vector<Eigen::Matrix3f> euler_angles_matrices = GetEulerAnglesMatrices(R);
+                        Eigen::Matrix3f R_without_root = root->GetRotation().transpose() * R;
+                        Eigen::Vector3f euler_angles = R_without_root.eulerAngles(2, 1, 0);
 
                         // Left-Right mouse movements
                         float z_angle = -float(xAtPress - x) / angleCoeff;
-                        Eigen::Matrix3f rot_z;
-                        rot_z.row(0) = Eigen::Vector3f(cos(z_angle), -sin(z_angle), 0);
-                        rot_z.row(1) = Eigen::Vector3f(sin(z_angle), cos(z_angle), 0);
-                        rot_z.row(2) = Eigen::Vector3f(0, 0, 1);
 
                         // Up-Down mouse movements
                         float x_angle = float(yAtPress - y) / angleCoeff;
-                        Eigen::Matrix3f rot_x;
-                        rot_x.row(0) = Eigen::Vector3f(1, 0, 0);
-                        rot_x.row(1) = Eigen::Vector3f(0, cos(x_angle), -sin(x_angle));
-                        rot_x.row(2) = Eigen::Vector3f(0, sin(x_angle), cos(x_angle));
+
+                        Eigen::AngleAxisf phi(euler_angles(0) + z_angle, Eigen::Vector3f::UnitZ());
+                        Eigen::AngleAxisf theta(euler_angles(1), Eigen::Vector3f::UnitY());
+                        Eigen::AngleAxisf psi(euler_angles(2) + x_angle, Eigen::Vector3f::UnitX());
 
                         // Calculate new rotation
-                        Eigen::Matrix3f R_new = euler_angles_matrices[0] * euler_angles_matrices[1] * rot_x * euler_angles_matrices[2] * rot_z;
-                        pickedModel->Rotate(R.inverse() * R_new);
-
+                        Eigen::Matrix3f R_new = root->GetRotation() * Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
+                        pickedModel->Rotate(R.transpose() * R_new);
 
                         //pickedModel->RotateInSystem(system, -float(xAtPress - x) / angleCoeff, Axis::Z);
                         //pickedModel->RotateInSystem(system, float(yAtPress - y) / angleCoeff, Axis::X);
@@ -555,7 +551,7 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
 
             // Rotate link
             float angle = (acosf(dot) * (180.f / 3.14f)) / angle_divider;
-            Eigen::Vector3f rotation_vector = cyls[curr_link]->GetAggregatedTransform().block<3, 3>(0, 0).inverse() * normal;
+            Eigen::Vector3f rotation_vector = cyls[curr_link]->GetRotation().transpose() * normal;
             cyls[curr_link]->RotateByDegree(angle, rotation_vector);
 
             curr_link--;
@@ -687,7 +683,7 @@ void BasicScene::IKSolverHelper(int link_id, Eigen::Vector3f D) {
 
     // Rotate link
     float angle = (acos(dot) * (180.f / 3.14f)) / angle_divider;
-    Eigen::Vector3f rotation_vector = cyls[link_id]->GetAggregatedTransform().block<3, 3>(0, 0).inverse() * normal;
+    Eigen::Vector3f rotation_vector = cyls[link_id]->GetRotation().transpose() * normal;
     cyls[link_id]->RotateByDegree(angle, rotation_vector);
 }
 
