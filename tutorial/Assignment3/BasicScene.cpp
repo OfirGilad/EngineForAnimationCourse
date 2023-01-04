@@ -558,9 +558,9 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
             //Eigen::Matrix3f Ri = cyls[curr_link]->GetRotation();
             //Eigen::Matrix3f R_without_root = root->GetRotation().transpose() * Ri;
             //Eigen::Vector3f euler_angles = R_without_root.eulerAngles(2, 1, 0);
-            //float angle1 = angle * rotation_vector.x();
+            //float angle1 = angle * rotation_vector.z();
             //float angle2 = angle * rotation_vector.y();
-            //float angle3 = angle * rotation_vector.z();
+            //float angle3 = angle * rotation_vector.x();
             //Eigen::AngleAxisf phi(euler_angles(0) + angle1, Eigen::Vector3f::UnitZ());
             //Eigen::AngleAxisf theta(euler_angles(1) + angle2, Eigen::Vector3f::UnitY());
             //Eigen::AngleAxisf psi(euler_angles(2) + +angle3, Eigen::Vector3f::UnitX());
