@@ -75,14 +75,14 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     root->AddChild(axis[0]);
     float scaleFactor = 1; 
     cyls.push_back(Model::Create("cyl", cylMesh, material));
-    cyls[0]->Scale(scaleFactor,Axis::X);
+    cyls[0]->Scale(scaleFactor,Axis::Z);
     cyls[0]->SetCenter(Eigen::Vector3f(0,0,-0.8f*scaleFactor));
     root->AddChild(cyls[0]);
 
     for(int i = 1; i < 3; i++)
     { 
         cyls.push_back(Model::Create("cyl", cylMesh, material));
-        cyls[i]->Scale(scaleFactor,Axis::X);   
+        cyls[i]->Scale(scaleFactor,Axis::Z);   
         cyls[i]->Translate(1.6f*scaleFactor,Axis::Z);
         cyls[i]->SetCenter(Eigen::Vector3f(0,0,-0.8f*scaleFactor));
         cyls[i-1]->AddChild(cyls[i]);
@@ -813,17 +813,16 @@ void BasicScene::Right_Callback()
     bool arm_selected = false;
     for (int i = 0; i < num_of_links && !arm_selected; i++) {
         if (pickedModel == cyls[i]) {
-            Eigen::Matrix3f R = pickedModel->GetRotation();
-            std::vector<Eigen::Matrix3f> euler_angles_matrices = GetEulerAnglesMatrices(R);
+            Eigen::Matrix3f R = root->GetRotation().inverse() * pickedModel->GetRotation();
+            Eigen::Vector3f euler_angles = R.eulerAngles(2, 1, 0);
 
             float angle = 0.1f;
-            Eigen::Matrix3f z;
-            z.row(0) = Eigen::Vector3f(cos(angle), -sin(angle), 0);
-            z.row(1) = Eigen::Vector3f(sin(angle), cos(angle), 0);
-            z.row(2) = Eigen::Vector3f(0, 0, 1);
+            Eigen::AngleAxisf phi(euler_angles(0) + angle, Eigen::Vector3f::UnitZ());
+            Eigen::AngleAxisf theta(euler_angles(1), Eigen::Vector3f::UnitY());
+            Eigen::AngleAxisf psi(euler_angles(2), Eigen::Vector3f::UnitX());
 
             // Calculate new rotation
-            Eigen::Matrix3f R_new = euler_angles_matrices[0] * euler_angles_matrices[1] * euler_angles_matrices[2] * z;
+            Eigen::Matrix3f R_new = Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
             pickedModel->Rotate(R.inverse() * R_new);
 
             arm_selected = true;
@@ -843,17 +842,16 @@ void BasicScene::Left_Callback()
     bool arm_selected = false;
     for (int i = 0; i < num_of_links && !arm_selected; i++) {
         if (pickedModel == cyls[i]) {
-            Eigen::Matrix3f R = pickedModel->GetRotation();
-            std::vector<Eigen::Matrix3f> euler_angles_matrices = GetEulerAnglesMatrices(R);
+            Eigen::Matrix3f R = root->GetRotation().inverse() * pickedModel->GetRotation();
+            Eigen::Vector3f euler_angles = R.eulerAngles(2, 1, 0);
 
             float angle = -0.1f;
-            Eigen::Matrix3f z;
-            z.row(0) = Eigen::Vector3f(cos(angle), -sin(angle), 0);
-            z.row(1) = Eigen::Vector3f(sin(angle), cos(angle), 0);
-            z.row(2) = Eigen::Vector3f(0, 0, 1);
+            Eigen::AngleAxisf phi(euler_angles(0) + angle, Eigen::Vector3f::UnitZ());
+            Eigen::AngleAxisf theta(euler_angles(1), Eigen::Vector3f::UnitY());
+            Eigen::AngleAxisf psi(euler_angles(2), Eigen::Vector3f::UnitX());
 
             // Calculate new rotation
-            Eigen::Matrix3f R_new = euler_angles_matrices[0] * euler_angles_matrices[1] * euler_angles_matrices[2] * z;
+            Eigen::Matrix3f R_new = Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
             pickedModel->Rotate(R.inverse() * R_new);
 
             arm_selected = true;
@@ -873,17 +871,16 @@ void BasicScene::Up_Callback()
     bool arm_selected = false;
     for (int i = 0; i < num_of_links && !arm_selected; i++) {
         if (pickedModel == cyls[i]) {
-            Eigen::Matrix3f R = pickedModel->GetRotation();
-            std::vector<Eigen::Matrix3f> euler_angles_matrices = GetEulerAnglesMatrices(R);
+            Eigen::Matrix3f R = root->GetRotation().inverse() * pickedModel->GetRotation();
+            Eigen::Vector3f euler_angles = R.eulerAngles(2, 1, 0);
 
             float angle = 0.1f;
-            Eigen::Matrix3f x;
-            x.row(0) = Eigen::Vector3f(1, 0, 0);
-            x.row(1) = Eigen::Vector3f(0, cos(angle), -sin(angle));
-            x.row(2) = Eigen::Vector3f(0, sin(angle), cos(angle));
+            Eigen::AngleAxisf phi(euler_angles(0), Eigen::Vector3f::UnitZ());
+            Eigen::AngleAxisf theta(euler_angles(1), Eigen::Vector3f::UnitY());
+            Eigen::AngleAxisf psi(euler_angles(2) + angle, Eigen::Vector3f::UnitX());
 
             // Calculate new rotation
-            Eigen::Matrix3f R_new = euler_angles_matrices[0] * euler_angles_matrices[1] * x * euler_angles_matrices[2];
+            Eigen::Matrix3f R_new = Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
             pickedModel->Rotate(R.inverse() * R_new);
 
             arm_selected = true;
@@ -903,17 +900,16 @@ void BasicScene::Down_Callback()
     bool arm_selected = false;
     for (int i = 0; i < num_of_links && !arm_selected; i++) {
         if (pickedModel == cyls[i]) {
-            Eigen::Matrix3f R = pickedModel->GetRotation();
-            std::vector<Eigen::Matrix3f> euler_angles_matrices = GetEulerAnglesMatrices(R);
+            Eigen::Matrix3f R = root->GetRotation().inverse() * pickedModel->GetRotation();
+            Eigen::Vector3f euler_angles = R.eulerAngles(2, 1, 0);
 
             float angle = -0.1f;
-            Eigen::Matrix3f x;
-            x.row(0) = Eigen::Vector3f(1, 0, 0);
-            x.row(1) = Eigen::Vector3f(0, cos(angle), -sin(angle));
-            x.row(2) = Eigen::Vector3f(0, sin(angle), cos(angle));
+            Eigen::AngleAxisf phi(euler_angles(0), Eigen::Vector3f::UnitZ());
+            Eigen::AngleAxisf theta(euler_angles(1), Eigen::Vector3f::UnitY());
+            Eigen::AngleAxisf psi(euler_angles(2) + angle, Eigen::Vector3f::UnitX());
 
             // Calculate new rotation
-            Eigen::Matrix3f R_new = euler_angles_matrices[0] * euler_angles_matrices[1] * x * euler_angles_matrices[2];
+            Eigen::Matrix3f R_new = Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
             pickedModel->Rotate(R.inverse() * R_new);
 
             arm_selected = true;
@@ -974,14 +970,14 @@ void BasicScene::Numbers_Callback(int num_of_link) {
     root->AddChild(axis[0]);
     float scaleFactor = 1;
     cyls.push_back(Model::Create("cyl", cylMesh, material));
-    cyls[0]->Scale(scaleFactor, Axis::X);
+    cyls[0]->Scale(scaleFactor, Axis::Z);
     cyls[0]->SetCenter(Eigen::Vector3f(0, 0, -0.8f * scaleFactor));
     root->AddChild(cyls[0]);
 
     for (int i = 1; i < num_of_link; i++)
     {
         cyls.push_back(Model::Create("cyl", cylMesh, material));
-        cyls[i]->Scale(scaleFactor, Axis::X);
+        cyls[i]->Scale(scaleFactor, Axis::Z);
         cyls[i]->Translate(1.6f * scaleFactor, Axis::Z);
         cyls[i]->SetCenter(Eigen::Vector3f(0, 0, -0.8f * scaleFactor));
         cyls[i - 1]->AddChild(cyls[i]);
