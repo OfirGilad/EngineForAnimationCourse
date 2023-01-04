@@ -257,7 +257,6 @@ void BasicScene::CursorPosCallback(Viewport* viewport, int x, int y, bool draggi
                 //pickedModel->RotateInSystem(system, float(yAtPress - y) / angleCoeff, Axis::X);
 
 
-                // IN PROGRESS
                 // Left mouse button will rotate objects or the scene in the same manner of the arrows
                 bool arm_selected = false;
                 for (int i = 0; i < num_of_links && !arm_selected; i++) {
@@ -280,8 +279,6 @@ void BasicScene::CursorPosCallback(Viewport* viewport, int x, int y, bool draggi
                         Eigen::Matrix3f R_new = root->GetRotation() * Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
                         pickedModel->Rotate(R.transpose() * R_new);
 
-                        //pickedModel->RotateInSystem(system, -float(xAtPress - x) / angleCoeff, Axis::Z);
-                        //pickedModel->RotateInSystem(system, float(yAtPress - y) / angleCoeff, Axis::X);
                         arm_selected = true;
                     }
                 }
@@ -819,7 +816,6 @@ void BasicScene::N_Callback()
     }
 }
 
-// IN PROGRESS
 void BasicScene::Right_Callback()
 {
     auto system = camera->GetRotation().transpose();
@@ -849,7 +845,6 @@ void BasicScene::Right_Callback()
     }
 }
 
-// IN PROGRESS
 void BasicScene::Left_Callback()
 {
     auto system = camera->GetRotation().transpose();
@@ -879,7 +874,6 @@ void BasicScene::Left_Callback()
     }
 }
 
-// IN PROGRESS
 void BasicScene::Up_Callback()
 {
     auto system = camera->GetRotation().transpose();
@@ -909,7 +903,6 @@ void BasicScene::Up_Callback()
     }
 }
 
-// IN PROGRESS
 void BasicScene::Down_Callback()
 {
     auto system = camera->GetRotation().transpose();
