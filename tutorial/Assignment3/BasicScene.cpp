@@ -553,6 +553,24 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
             float angle = (acosf(dot) * (180.f / 3.14f)) / angle_divider;
             Eigen::Vector3f rotation_vector = cyls[curr_link]->GetRotation().transpose() * normal;
             cyls[curr_link]->RotateByDegree(angle, rotation_vector);
+            
+
+            //// Need to save euler angles after IK
+            //float angle = acosf(dot) / angle_divider;
+            //Eigen::Vector3f rotation_vector = cyls[curr_link]->GetRotation().transpose() * normal;
+            //Eigen::Matrix3f Ri = cyls[curr_link]->GetRotation();
+            //Eigen::Matrix3f R_without_root = root->GetRotation().transpose() * Ri;
+            //Eigen::Vector3f euler_angles = R_without_root.eulerAngles(2, 1, 0);
+            //float angle1 = angle * rotation_vector.x();
+            //float angle2 = angle * rotation_vector.y();
+            //float angle3 = angle * rotation_vector.z();
+            //Eigen::AngleAxisf phi(euler_angles(0) + angle1, Eigen::Vector3f::UnitZ());
+            //Eigen::AngleAxisf theta(euler_angles(1) + angle2, Eigen::Vector3f::UnitY());
+            //Eigen::AngleAxisf psi(euler_angles(2) + +angle3, Eigen::Vector3f::UnitX());
+            //// Calculate new rotation
+            //Eigen::Matrix3f R_new = root->GetRotation() * Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
+            //cyls[curr_link]->Rotate(Ri.transpose() * R_new);
+
 
             curr_link--;
         }
