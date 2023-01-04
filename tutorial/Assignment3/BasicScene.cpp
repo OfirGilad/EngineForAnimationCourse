@@ -813,8 +813,9 @@ void BasicScene::Right_Callback()
     bool arm_selected = false;
     for (int i = 0; i < num_of_links && !arm_selected; i++) {
         if (pickedModel == cyls[i]) {
-            Eigen::Matrix3f R = root->GetRotation().inverse() * pickedModel->GetRotation();
-            Eigen::Vector3f euler_angles = R.eulerAngles(2, 1, 0);
+            Eigen::Matrix3f R = pickedModel->GetRotation();
+            Eigen::Matrix3f R_without_root = root->GetRotation().transpose() * R;
+            Eigen::Vector3f euler_angles = R_without_root.eulerAngles(2, 1, 0);
 
             float angle = 0.1f;
             Eigen::AngleAxisf phi(euler_angles(0) + angle, Eigen::Vector3f::UnitZ());
@@ -822,8 +823,8 @@ void BasicScene::Right_Callback()
             Eigen::AngleAxisf psi(euler_angles(2), Eigen::Vector3f::UnitX());
 
             // Calculate new rotation
-            Eigen::Matrix3f R_new = Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
-            pickedModel->Rotate(R.inverse() * R_new);
+            Eigen::Matrix3f R_new = root->GetRotation() * Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
+            pickedModel->Rotate(R.transpose() * R_new);
 
             arm_selected = true;
         }
@@ -842,8 +843,9 @@ void BasicScene::Left_Callback()
     bool arm_selected = false;
     for (int i = 0; i < num_of_links && !arm_selected; i++) {
         if (pickedModel == cyls[i]) {
-            Eigen::Matrix3f R = root->GetRotation().inverse() * pickedModel->GetRotation();
-            Eigen::Vector3f euler_angles = R.eulerAngles(2, 1, 0);
+            Eigen::Matrix3f R = pickedModel->GetRotation();
+            Eigen::Matrix3f R_without_root = root->GetRotation().transpose() * R;
+            Eigen::Vector3f euler_angles = R_without_root.eulerAngles(2, 1, 0);
 
             float angle = -0.1f;
             Eigen::AngleAxisf phi(euler_angles(0) + angle, Eigen::Vector3f::UnitZ());
@@ -851,8 +853,8 @@ void BasicScene::Left_Callback()
             Eigen::AngleAxisf psi(euler_angles(2), Eigen::Vector3f::UnitX());
 
             // Calculate new rotation
-            Eigen::Matrix3f R_new = Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
-            pickedModel->Rotate(R.inverse() * R_new);
+            Eigen::Matrix3f R_new = root->GetRotation() * Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
+            pickedModel->Rotate(R.transpose() * R_new);
 
             arm_selected = true;
         }
@@ -871,8 +873,9 @@ void BasicScene::Up_Callback()
     bool arm_selected = false;
     for (int i = 0; i < num_of_links && !arm_selected; i++) {
         if (pickedModel == cyls[i]) {
-            Eigen::Matrix3f R = root->GetRotation().inverse() * pickedModel->GetRotation();
-            Eigen::Vector3f euler_angles = R.eulerAngles(2, 1, 0);
+            Eigen::Matrix3f R = pickedModel->GetRotation();
+            Eigen::Matrix3f R_without_root = root->GetRotation().transpose() * R;
+            Eigen::Vector3f euler_angles = R_without_root.eulerAngles(2, 1, 0);
 
             float angle = 0.1f;
             Eigen::AngleAxisf phi(euler_angles(0), Eigen::Vector3f::UnitZ());
@@ -880,8 +883,8 @@ void BasicScene::Up_Callback()
             Eigen::AngleAxisf psi(euler_angles(2) + angle, Eigen::Vector3f::UnitX());
 
             // Calculate new rotation
-            Eigen::Matrix3f R_new = Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
-            pickedModel->Rotate(R.inverse() * R_new);
+            Eigen::Matrix3f R_new = root->GetRotation() * Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
+            pickedModel->Rotate(R.transpose() * R_new);
 
             arm_selected = true;
         }
@@ -900,8 +903,9 @@ void BasicScene::Down_Callback()
     bool arm_selected = false;
     for (int i = 0; i < num_of_links && !arm_selected; i++) {
         if (pickedModel == cyls[i]) {
-            Eigen::Matrix3f R = root->GetRotation().inverse() * pickedModel->GetRotation();
-            Eigen::Vector3f euler_angles = R.eulerAngles(2, 1, 0);
+            Eigen::Matrix3f R = pickedModel->GetRotation();
+            Eigen::Matrix3f R_without_root = root->GetRotation().transpose() * R;
+            Eigen::Vector3f euler_angles = R_without_root.eulerAngles(2, 1, 0);
 
             float angle = -0.1f;
             Eigen::AngleAxisf phi(euler_angles(0), Eigen::Vector3f::UnitZ());
@@ -909,8 +913,8 @@ void BasicScene::Down_Callback()
             Eigen::AngleAxisf psi(euler_angles(2) + angle, Eigen::Vector3f::UnitX());
 
             // Calculate new rotation
-            Eigen::Matrix3f R_new = Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
-            pickedModel->Rotate(R.inverse() * R_new);
+            Eigen::Matrix3f R_new = root->GetRotation() * Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
+            pickedModel->Rotate(R.transpose() * R_new);
 
             arm_selected = true;
         }
