@@ -241,7 +241,7 @@ void BasicScene::CursorPosCallback(Viewport* viewport, int x, int y, bool draggi
                 bool arm_selected = false;
                 for (int i = 0; i < num_of_links && !arm_selected; i++) {
                     if (pickedModel == cyls[i]) {
-                        cyls[0]->TranslateInSystem(system * cyls[0]->GetRotation(), { -float(xAtPress - x) / moveCoeff, float(yAtPress - y) / moveCoeff, 0 });
+                        cyls[first_link_id]->TranslateInSystem(system * cyls[first_link_id]->GetRotation(), { -float(xAtPress - x) / moveCoeff, float(yAtPress - y) / moveCoeff, 0 });
                         arm_selected = true;
                     }
                 }
