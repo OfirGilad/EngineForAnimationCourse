@@ -207,7 +207,7 @@ void BasicScene::ScrollCallback(Viewport* viewport, int x, int y, int xoffset, i
         bool arm_selected = false;
         for (int i = 0; i < num_of_links && !arm_selected; i++) {
             if (pickedModel == cyls[i]) {
-                cyls[0]->TranslateInSystem(system * cyls[0]->GetRotation(), { 0, 0, -float(yoffset) });
+                cyls[first_link_id]->TranslateInSystem(system * cyls[first_link_id]->GetRotation(), { 0, 0, -float(yoffset) });
                 pickedToutAtPress = pickedModel->GetTout();
                 arm_selected = true;
             }
