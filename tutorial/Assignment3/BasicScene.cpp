@@ -76,7 +76,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
     float scaleFactor = 1; 
     cyls.push_back(Model::Create("cyl", cylMesh, material));
     cyls[0]->Scale(scaleFactor,Axis::Z);
-    cyls[0]->SetCenter(Eigen::Vector3f(0,0,-0.8f*scaleFactor));
+    cyls[0]->SetCenter(Eigen::Vector3f(0, 0, -0.8f*scaleFactor));
     root->AddChild(cyls[0]);
 
     for(int i = 1; i < 3; i++)
@@ -84,7 +84,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
         cyls.push_back(Model::Create("cyl", cylMesh, material));
         cyls[i]->Scale(scaleFactor,Axis::Z);   
         cyls[i]->Translate(1.6f*scaleFactor,Axis::Z);
-        cyls[i]->SetCenter(Eigen::Vector3f(0,0,-0.8f*scaleFactor));
+        cyls[i]->SetCenter(Eigen::Vector3f(0, 0, -0.8f*scaleFactor));
         cyls[i-1]->AddChild(cyls[i]);
 
         // Axis
@@ -94,7 +94,7 @@ void BasicScene::Init(float fov, int width, int height, float near, float far)
         cyls[i-1]->AddChild(axis[i]);
         axis[i]->Translate(0.8f*scaleFactor, Axis::Z);
     }
-    cyls[0]->Translate({0,0,0.8f*scaleFactor});
+    cyls[0]->Translate({0, 0, 0.8f*scaleFactor});
     root->RotateByDegree(90, Eigen::Vector3f(-1, 0, 0));
 
     auto morphFunc = [](Model* model, cg3d::Visitor* visitor) {
@@ -263,7 +263,7 @@ void BasicScene::CursorPosCallback(Viewport* viewport, int x, int y, bool draggi
                     if (pickedModel == cyls[i]) {
                         Eigen::Matrix3f R = pickedModel->GetRotation();
                         Eigen::Matrix3f R_without_root = root->GetRotation().transpose() * R;
-                        Eigen::Vector3f euler_angles = R_without_root.eulerAngles(2, 1, 0);
+                        Eigen::Vector3f euler_angles = R_without_root.eulerAngles(2, 0, 2);
 
                         // Left-Right mouse movements
                         float z_angle = -float(xAtPress - x) / angleCoeff;
@@ -271,9 +271,9 @@ void BasicScene::CursorPosCallback(Viewport* viewport, int x, int y, bool draggi
                         // Up-Down mouse movements
                         float x_angle = float(yAtPress - y) / angleCoeff;
 
-                        Eigen::AngleAxisf phi(euler_angles(0) + z_angle, Eigen::Vector3f::UnitZ());
-                        Eigen::AngleAxisf theta(euler_angles(1), Eigen::Vector3f::UnitY());
-                        Eigen::AngleAxisf psi(euler_angles(2) + x_angle, Eigen::Vector3f::UnitX());
+                        Eigen::AngleAxisf phi(euler_angles[0] + z_angle, Eigen::Vector3f::UnitZ());
+                        Eigen::AngleAxisf theta(euler_angles[1] + x_angle, Eigen::Vector3f::UnitX());
+                        Eigen::AngleAxisf psi(euler_angles[2], Eigen::Vector3f::UnitZ());
 
                         // Calculate new rotation
                         Eigen::Matrix3f R_new = root->GetRotation() * Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
@@ -811,9 +811,9 @@ void BasicScene::Right_Callback()
             Eigen::Vector3f euler_angles = R_without_root.eulerAngles(2, 0, 2);
 
             float angle = 0.1f;
-            Eigen::AngleAxisf phi(euler_angles(0) + angle, Eigen::Vector3f::UnitZ());
-            Eigen::AngleAxisf theta(euler_angles(1), Eigen::Vector3f::UnitX());
-            Eigen::AngleAxisf psi(euler_angles(2), Eigen::Vector3f::UnitZ());
+            Eigen::AngleAxisf phi(euler_angles[0] + angle, Eigen::Vector3f::UnitZ());
+            Eigen::AngleAxisf theta(euler_angles[1], Eigen::Vector3f::UnitX());
+            Eigen::AngleAxisf psi(euler_angles[2], Eigen::Vector3f::UnitZ());
 
             // Calculate new rotation
             Eigen::Matrix3f R_new = root->GetRotation() * Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
@@ -840,9 +840,9 @@ void BasicScene::Left_Callback()
             Eigen::Vector3f euler_angles = R_without_root.eulerAngles(2, 0, 2);
 
             float angle = -0.1f;
-            Eigen::AngleAxisf phi(euler_angles(0) + angle, Eigen::Vector3f::UnitZ());
-            Eigen::AngleAxisf theta(euler_angles(1), Eigen::Vector3f::UnitX());
-            Eigen::AngleAxisf psi(euler_angles(2), Eigen::Vector3f::UnitZ());
+            Eigen::AngleAxisf phi(euler_angles[0] + angle, Eigen::Vector3f::UnitZ());
+            Eigen::AngleAxisf theta(euler_angles[1], Eigen::Vector3f::UnitX());
+            Eigen::AngleAxisf psi(euler_angles[2], Eigen::Vector3f::UnitZ());
 
             // Calculate new rotation
             Eigen::Matrix3f R_new = root->GetRotation() * Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
@@ -869,9 +869,9 @@ void BasicScene::Up_Callback()
             Eigen::Vector3f euler_angles = R_without_root.eulerAngles(2, 0, 2);
 
             float angle = 0.1f;
-            Eigen::AngleAxisf phi(euler_angles(0), Eigen::Vector3f::UnitZ());
-            Eigen::AngleAxisf theta(euler_angles(1) + angle, Eigen::Vector3f::UnitX());
-            Eigen::AngleAxisf psi(euler_angles(2), Eigen::Vector3f::UnitZ());
+            Eigen::AngleAxisf phi(euler_angles[0], Eigen::Vector3f::UnitZ());
+            Eigen::AngleAxisf theta(euler_angles[1] + angle, Eigen::Vector3f::UnitX());
+            Eigen::AngleAxisf psi(euler_angles[2], Eigen::Vector3f::UnitZ());
 
             // Calculate new rotation
             Eigen::Matrix3f R_new = root->GetRotation() * Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
@@ -898,9 +898,9 @@ void BasicScene::Down_Callback()
             Eigen::Vector3f euler_angles = R_without_root.eulerAngles(2, 0, 2);
 
             float angle = -0.1f;
-            Eigen::AngleAxisf phi(euler_angles(0), Eigen::Vector3f::UnitZ());
-            Eigen::AngleAxisf theta(euler_angles(1) + angle, Eigen::Vector3f::UnitX());
-            Eigen::AngleAxisf psi(euler_angles(2), Eigen::Vector3f::UnitZ());
+            Eigen::AngleAxisf phi(euler_angles[0], Eigen::Vector3f::UnitZ());
+            Eigen::AngleAxisf theta(euler_angles[1] + angle, Eigen::Vector3f::UnitX());
+            Eigen::AngleAxisf psi(euler_angles[2], Eigen::Vector3f::UnitZ());
 
             // Calculate new rotation
             Eigen::Matrix3f R_new = root->GetRotation() * Eigen::Quaternionf(phi * theta * psi).toRotationMatrix();
@@ -943,11 +943,11 @@ void BasicScene::Numbers_Callback(int num_of_link) {
     auto program = std::make_shared<Program>("shaders/phongShader");
     auto program1 = std::make_shared<Program>("shaders/pickingShader");
 
-    auto material{ std::make_shared<Material>("material", program) }; // empty material
-    auto material1{ std::make_shared<Material>("material", program1) }; // empty material
+    auto material{std::make_shared<Material>("material", program)}; // empty material
+    auto material1{std::make_shared<Material>("material", program1)}; // empty material
 
     material->AddTexture(0, "textures/box0.bmp", 2);
-    auto cylMesh{ IglLoader::MeshFromFiles("cyl_igl","data/zcylinder.obj") };
+    auto cylMesh{IglLoader::MeshFromFiles("cyl_igl","data/zcylinder.obj")};
 
     Eigen::MatrixXd vertices(6, 3);
     vertices << -1, 0, 0, 1, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, -1, 0, 0, 1;
@@ -971,18 +971,18 @@ void BasicScene::Numbers_Callback(int num_of_link) {
         cyls.push_back(Model::Create("cyl", cylMesh, material));
         cyls[i]->Scale(scaleFactor, Axis::Z);
         cyls[i]->Translate(1.6f * scaleFactor, Axis::Z);
-        cyls[i]->SetCenter(Eigen::Vector3f(0, 0, -0.8f * scaleFactor));
-        cyls[i - 1]->AddChild(cyls[i]);
+        cyls[i]->SetCenter(Eigen::Vector3f(0, 0, -0.8f*scaleFactor));
+        cyls[i-1]->AddChild(cyls[i]);
 
         // Axis
         axis.push_back(Model::Create("axis", coordsys, material1));
         axis[i]->mode = 1;
         axis[i]->Scale(4, Axis::XYZ);
-        cyls[i - 1]->AddChild(axis[i]);
-        axis[i]->Translate(0.8f * scaleFactor, Axis::Z);
+        cyls[i-1]->AddChild(axis[i]);
+        axis[i]->Translate(0.8f*scaleFactor, Axis::Z);
     }
-    cyls[0]->Translate({ 0,0,0.8f * scaleFactor });
-    root->Translate({ 0,0,0 });
+    cyls[0]->Translate({0, 0, 0.8f*scaleFactor});
+    root->Translate({0 ,0, 0});
 
     first_link_id = 0;
     last_link_id = num_of_link - 1;
