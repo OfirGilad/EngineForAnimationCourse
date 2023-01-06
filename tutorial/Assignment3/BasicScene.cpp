@@ -289,7 +289,7 @@ void BasicScene::CursorPosCallback(Viewport* viewport, int x, int y, bool draggi
                 } 
             }
         } else {
-           //camera->SetTout(cameraToutAtPress);
+            //camera->SetTout(cameraToutAtPress);
             if (buttonState[GLFW_MOUSE_BUTTON_RIGHT] != GLFW_RELEASE)
                 root->TranslateInSystem(system, {-float(xAtPress - x) / moveCoeff/10.0f, float( yAtPress - y) / moveCoeff/10.0f, 0});
             if (buttonState[GLFW_MOUSE_BUTTON_MIDDLE] != GLFW_RELEASE)
