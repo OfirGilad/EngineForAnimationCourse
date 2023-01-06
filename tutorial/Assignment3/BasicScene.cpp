@@ -453,6 +453,7 @@ Eigen::Vector3f BasicScene::GetSpherePos()
 }
 
 // New Functions
+// Get the destination position (sphere1 center)
 Eigen::Vector3f BasicScene::GetDestinationPosition()
 {
     Eigen::Matrix4f destination_transform = sphere1->GetAggregatedTransform();
@@ -461,6 +462,7 @@ Eigen::Vector3f BasicScene::GetDestinationPosition()
     return destination_position;
 }
 
+// Get the tip position of cyls[link_id]
 Eigen::Vector3f BasicScene::GetLinkTipPosition(int link_id)
 {
     Eigen::Vector3f cyl_length = Eigen::Vector3f(0, 0, 0.8f);
@@ -472,6 +474,7 @@ Eigen::Vector3f BasicScene::GetLinkTipPosition(int link_id)
     return arm_tip_position;
 }
 
+// Get the source position of cyls[link_id]
 Eigen::Vector3f BasicScene::GetLinkSourcePosition(int link_id) {
     Eigen::Vector3f cyl_length = Eigen::Vector3f(0, 0, 0.8f);
 
@@ -482,11 +485,12 @@ Eigen::Vector3f BasicScene::GetLinkSourcePosition(int link_id) {
     return arm_source_position;
 }
 
+// Get the euler matrices (A_0, A_1, A_2) according to ZXZ Euler angles
 std::vector<Eigen::Matrix3f> BasicScene::GetEulerAnglesMatrices(Eigen::Matrix3f R) {
     // Get phi, theta and psi, according to ZXZ Euler angles
     Eigen::Vector3f zxz = R.eulerAngles(2, 0, 2);
 
-    // Building eulaer angles matrices
+    // Building euler angles matrices
     Eigen::Matrix3f phi;
     phi.row(0) = Eigen::Vector3f(cos(zxz.x()), -sin(zxz.x()), 0);
     phi.row(1) = Eigen::Vector3f(sin(zxz.x()), cos(zxz.x()), 0);
@@ -510,6 +514,7 @@ std::vector<Eigen::Matrix3f> BasicScene::GetEulerAnglesMatrices(Eigen::Matrix3f 
     return euler_angles_matrices;
 }
 
+// Inverse Kinematics Coordinate Decent Method
 void BasicScene::IKCyclicCoordinateDecentMethod() {
     if (animate_CCD && animate) {
         Eigen::Vector3f D = GetDestinationPosition();
@@ -562,6 +567,7 @@ void BasicScene::IKCyclicCoordinateDecentMethod() {
     }
 }
 
+// Inverse Kinematics Fabrik Method
 void BasicScene::IKFabrikMethod() {
     if (animate_Fabrik && animate) {
         // The joint positions
@@ -667,6 +673,7 @@ void BasicScene::IKFabrikMethod() {
     }
 }
 
+// Inverse Kinematics helper function to perform the links rotations
 void BasicScene::IKSolverHelper(int link_id, Eigen::Vector3f D) {
     Eigen::Vector3f R = GetLinkSourcePosition(link_id);
     Eigen::Vector3f E = GetLinkTipPosition(link_id);
