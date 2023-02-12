@@ -30,4 +30,6 @@ add_subdirectory(Demo)
 
 add_subdirectory(Example1)
 
-add_subdirectory(Assignment1)
+add_subdirectory(Libigl404)
+
+add_subdirectory(Libigl703)

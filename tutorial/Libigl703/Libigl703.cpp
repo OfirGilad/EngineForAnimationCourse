@@ -1,7 +1,7 @@
 #include "Renderer.h"
 #include "Display.h"
 
-#define SCENE BasicScene // the scene (class name) to display
+#define SCENE Libigl_703_Scene // the scene (class name) to display
 
 #define STRINGIFY(X) #X
 #define CLASS_NAME_TO_HEADER(X) STRINGIFY(X.h)
@@ -19,7 +19,7 @@ int main()
     const float FAR = 120.0f;
 
     Renderer renderer;
-    Display display("Assignment1", DISPLAY_WIDTH, DISPLAY_HEIGHT, &renderer);
+    Display display("Libigl703", DISPLAY_WIDTH, DISPLAY_HEIGHT, &renderer);
     std::cout.setstate(std::ios_base::failbit); // suppress junk output to console from igl::opengl::glfw::Viewer
     auto scene = std::make_shared<SCENE>(STRINGIFY(SCENE), &display);
     std::cout.clear(); // re-enable output to console
